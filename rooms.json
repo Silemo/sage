@@ -43,8 +43,8 @@
     "time": "10:00-11:10",
     "location": "5B",
     "product": "PI Objectives",
-    "team": "Plenary Exp Runway",
-    "vs": "Exp Run",
+    "team": "Plenary Exp RW",
+    "vs": "Exp RW",
     "type": "Plenary"
   },
   {
@@ -226,7 +226,7 @@
   {
     "time": "11:30-16:00",
     "location": "5B",
-    "product": "EXP RW",
+    "product": "Exp RW",
     "team": "TDT-DCX",
     "vs": "Exp RW",
     "type": "Breakout"
@@ -240,97 +240,49 @@
     "type": "Breakout"
   },
   {
-    "time": "16:00-17:00",
+    "time": "16:00-18:00",
     "location": "2C",
-    "product": "Draft Plan Review",
+    "product": "Draft Plan Review/Problem Solving",
     "team": "Plenary PLM",
     "vs": "PLM",
     "type": "Plenary"
   },
   {
-    "time": "16:00-17:00",
+    "time": "16:00-18:00",
     "location": "0A",
-    "product": "Draft Plan Review",
+    "product": "Draft Plan Review/Problem Solving",
     "team": "Plenary R&D",
     "vs": "R&D",
     "type": "Plenary"
   },
   {
-    "time": "16:00-17:00",
+    "time": "16:00-18:00",
     "location": "1A",
-    "product": "Draft Plan Review",
+    "product": "Draft Plan Review/Problem Solving",
     "team": "Plenary MON",
     "vs": "MON",
     "type": "Plenary"
   },
   {
-    "time": "16:00-17:00",
+    "time": "16:00-18:00",
     "location": "3A",
-    "product": "Draft Plan Review",
+    "product": "Draft Plan Review/Problem Solving",
     "team": "Plenary TLM",
     "vs": "TLM",
     "type": "Plenary"
   },
   {
-    "time": "16:00-17:00",
+    "time": "16:00-18:00",
     "location": "5B",
-    "product": "Draft Plan Review",
-    "team": "Plenary Exp Runway",
-    "vs": "Exp Run",
+    "product": "Draft Plan Review/Problem Solving",
+    "team": "Plenary Exp RW",
+    "vs": "Exp RW",
     "type": "Plenary"
   },
   {
-    "time": "16:00-17:00",
+    "time": "16:00-18:00",
     "location": "13B",
-    "product": "Draft Plan Review",
-    "team": "Plenary MTA",
-    "vs": "MTA",
-    "type": "Plenary"
-  },
-    {
-    "time": "17:00-18:00",
-    "location": "2C",
-    "product": "Problem Solving",
-    "team": "Plenary PLM",
-    "vs": "PLM",
-    "type": "Plenary"
-  },
-  {
-    "time": "17:00-18:00",
-    "location": "0A",
-    "product": "Problem Solving",
-    "team": "Plenary R&D",
-    "vs": "R&D",
-    "type": "Plenary"
-  },
-  {
-    "time": "17:00-18:00",
-    "location": "1A",
-    "product": "Problem Solving",
-    "team": "Plenary MON",
-    "vs": "MON",
-    "type": "Plenary"
-  },
-  {
-    "time": "17:00-18:00",
-    "location": "3A",
-    "product": "Problem Solving",
-    "team": "Plenary TLM",
-    "vs": "TLM",
-    "type": "Plenary"
-  },
-  {
-    "time": "17:00-18:00",
-    "location": "5B",
-    "product": "Problem Solving",
-    "team": "Plenary Exp Runway",
-    "vs": "Exp Run",
-    "type": "Plenary"
-  },
-  {
-    "time": "17:00-18:00",
-    "location": "13B",
-    "product": "Problem Solving",
+    "product": "Draft Plan Review/Problem Solving",
     "team": "Plenary MTA",
     "vs": "MTA",
     "type": "Plenary"
