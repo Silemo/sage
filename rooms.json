@@ -66,7 +66,7 @@
   {
     "time": "11:30-16:00",
     "location": "2E",
-    "product": "EAF & Product UI & FHIR Adaptor",
+    "product": "EAF & Product UI & FHIR",
     "team": "MSFT",
     "vs": "PLM",
     "type": "Breakout"
@@ -194,7 +194,7 @@
   {
     "time": "11:30-16:00",
     "location": "3B",
-    "product": "UPhV + Inspection + PD and ESMP",
+    "product": "UPhV + Inspection + PD + ESMP",
     "team": "Flu Fighters",
     "vs": "MON",
     "type": "Breakout"
@@ -218,7 +218,7 @@
   {
     "time": "11:30-16:00",
     "location": "3A",
-    "product": "Information Security and decommissioning of non prod tenant",
+    "product": "Information Security",
     "team": "InfoSec",
     "vs": "TLM",
     "type": "Breakout"
