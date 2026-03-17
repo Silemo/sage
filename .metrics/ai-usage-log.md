@@ -1,0 +1,5 @@
+# AI Usage Log
+
+| Date | Category | Person | Tool | IDE | Task / Use Case | AI Usage Description | Outcome | Time Spent | Estimated Impact |
+|------|----------|--------|------|-----|-----------------|---------------------|---------|------------|------------------|
+| 2026-03-17 | Architecture | [Person] | Copilot | [IDE] | Architecture design for schedule viewer refactor — CSV import, hierarchical team/VS filtering, per-day navigation, color coding, current-time indicator | Explored full codebase (index.html, script.js, styles.css, rooms.json, room2.json). Identified 4 key limitations. Evaluated 3 design approaches (ES Modules, single-file, global namespace). Produced architecture document with canonical schema, 6 modules, data flow, filter logic, color palette, error handling, testing strategy, risks. Saved to artifacts/. | Working code produced — architecture document complete with all sections | [Time Spent] | Time saved ≈ 50-60% — AI handled exploration, analysis, comparison, and document generation; human review needed for filter logic, naming, and trade-offs |
