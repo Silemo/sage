@@ -74,16 +74,16 @@
   {
     "time": "11:30-16:00",
     "location": "2C",
-    "product": "PMS BEV",
-    "team": "Accenture",
+    "product": "PMS",
+    "team": "PMS BEV",
     "vs": "PLM",
     "type": "Breakout"
   },
   {
     "time": "11:30-16:00",
     "location": "2D",
-    "product": "PMS DQ",
-    "team": "Accenture",
+    "product": "PMS",
+    "team": "PMS DQ",
     "vs": "PLM",
     "type": "Breakout"
   },
