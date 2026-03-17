@@ -3,21 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PI Planning Breakout Rooms</title>
+  <title>PI Planning Schedule</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <h1>26Q2 PI Breakout Rooms day 1</h1>
+  <main class="page-shell">
+    <header class="page-header">
+      <p class="eyebrow">Static event schedule</p>
+      <h1 id="pageTitle">PI Planning Schedule</h1>
+      <p id="pageSubtitle" class="page-subtitle">All activities</p>
+    </header>
 
-  <div class="controls">
-    <input id="searchInput" type="text" placeholder="Search vs, team, room or product..." />
-    <select id="teamFilter">
-      <option value="">All Teams</option>
-    </select>
-  </div>
+    <section class="controls-panel" aria-label="Schedule filters">
+      <div id="dateTabs" class="date-tabs" aria-label="Available dates"></div>
 
-  <div id="rooms-container" class="rooms"></div>
+      <div class="controls">
+        <label class="filter-group">
+          <span class="filter-label">Search</span>
+          <input id="searchInput" type="text" placeholder="Search value stream, team, room or topics..." />
+        </label>
 
-  <script src="script.js"></script>
+        <label class="filter-group">
+          <span class="filter-label">Scope</span>
+          <select id="scopeSelect"></select>
+        </label>
+
+        <label class="filter-group import-control">
+          <span class="filter-label">Import CSV or JSON</span>
+          <input id="importInput" type="file" accept=".csv,.json,application/json,text/csv" />
+        </label>
+      </div>
+
+      <p id="statusMessage" class="status-message" hidden></p>
+      <div id="legend" class="legend" aria-label="Value stream legend"></div>
+    </section>
+
+    <section id="rooms-container" class="rooms" aria-live="polite"></section>
+  </main>
+
+  <script type="module" src="app.js"></script>
 </body>
 </html>

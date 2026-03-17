@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schedule Smoke Tests</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    .pass {
+      color: #166534;
+    }
+
+    .fail {
+      color: #b91c1c;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Schedule Smoke Tests</h1>
+    <p>This page runs a few browser-based assertions against the schedule modules.</p>
+    <ul id="results"></ul>
+  </main>
+
+  <script type="module">
+    import { parseCsv, normalizeRecord, normalizeVsName } from "./js/loader.js";
+    import { buildHierarchy, filterEvents } from "./js/filter.js";
+    import { getDefaultDate, normalizeState } from "./js/url-state.js";
+
+    const results = document.getElementById("results");
+
+    function addResult(label, passed, details = "") {
+      const item = document.createElement("li");
+      item.className = passed ? "pass" : "fail";
+      item.textContent = `${passed ? "PASS" : "FAIL"}: ${label}${details ? ` — ${details}` : ""}`;
+      results.appendChild(item);
+    }
+
+    function assert(condition, label, details = "") {
+      addResult(label, Boolean(condition), details);
+    }
+
+    const csvText = [
+      "date,start,end,team,vs,topics,location,type",
+      "2026-03-17,09:00,09:50,ALL,,PI Plenary,Auditorium,Plenary",
+      "2026-03-17,10:00,11:10,Plenary PLM,PLM,PI Objectives,2C,Plenary",
+      "2026-03-17,11:30,16:00,MSFT,PLM,\"Research, Discovery\",15A,Breakout"
+    ].join("\n");
+
+    const parsedRows = parseCsv(csvText);
+    assert(parsedRows.length === 3, "CSV parser returns all data rows", `rows=${parsedRows.length}`);
+    assert(parsedRows[2].topics === "Research, Discovery", "CSV parser preserves quoted commas", parsedRows[2].topics);
+
+    const globalPlenary = normalizeRecord({
+      date: "2026-03-17",
+      start: "09:00",
+      end: "09:50",
+      team: "ALL",
+      vs: "",
+      topics: "PI Plenary",
+      location: "Auditorium",
+      type: "Plenary"
+    }, "test", "");
+    assert(Boolean(globalPlenary.record), "Normalizer accepts global plenary rows with empty VS");
+
+    assert(normalizeVsName("Experimentation Runway") === "Exp RW", "VS aliases normalize to one key");
+
+    const fixtureEvents = [
+      globalPlenary.record,
+      normalizeRecord({ date: "2026-03-17", start: "10:00", end: "11:10", team: "Plenary PLM", vs: "PLM", topics: "PI Objectives", location: "2C", type: "Plenary" }, "test", "").record,
+      normalizeRecord({ date: "2026-03-17", start: "11:30", end: "16:00", team: "MSFT", vs: "PLM", topics: "ePI", location: "15A", type: "Breakout" }, "test", "").record,
+      normalizeRecord({ date: "2026-03-17", start: "11:30", end: "16:00", team: "PMS BEV", vs: "PLM", topics: "PMS", location: "2C", type: "Breakout" }, "test", "").record
+    ];
+
+    const hierarchy = buildHierarchy(fixtureEvents);
+    assert(hierarchy.valueStreams.PLM.length === 2, "Hierarchy excludes synthetic plenary teams", JSON.stringify(hierarchy.valueStreams.PLM));
+
+    const teamView = filterEvents(fixtureEvents, { date: "2026-03-17", mode: "team", value: "MSFT", search: "" });
+    assert(teamView.length === 3, "Team filter returns global plenary + VS plenary + team events only", `events=${teamView.length}`);
+
+    const vsView = filterEvents(fixtureEvents, { date: "2026-03-17", mode: "vs", value: "PLM", search: "" });
+    assert(vsView.length === 4, "VS filter returns the full value stream", `events=${vsView.length}`);
+
+    const normalizedState = normalizeState({ date: "bad-date", mode: "unknown", value: "x", search: "abc" }, ["2026-03-17", "2026-03-18"]);
+    assert(normalizedState.date === "2026-03-17", "State normalizer falls back to first valid date", normalizedState.date);
+    assert(normalizedState.mode === "all", "State normalizer falls back to all mode", normalizedState.mode);
+    assert(getDefaultDate(["2026-03-17", "2026-03-18"]) === "2026-03-17", "Default date picks first available when today is absent");
+  </script>
+</body>
+</html>

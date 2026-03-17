@@ -1,0 +1,12 @@
+{
+  "sources": [
+    {
+      "file": "rooms.json",
+      "defaultDate": "2026-03-17"
+    },
+    {
+      "file": "room2.json",
+      "defaultDate": "2026-03-18"
+    }
+  ]
+}

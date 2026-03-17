@@ -1,0 +1,38 @@
+{
+  "PLM": {
+    "bg": "#E3F2FD",
+    "border": "#1565C0"
+  },
+  "R&D": {
+    "bg": "#E8F5E9",
+    "border": "#2E7D32"
+  },
+  "MON": {
+    "bg": "#FFF3E0",
+    "border": "#E65100"
+  },
+  "TLM": {
+    "bg": "#F3E5F5",
+    "border": "#6A1B9A"
+  },
+  "Exp RW": {
+    "bg": "#FBE9E7",
+    "border": "#D84315"
+  },
+  "MTA": {
+    "bg": "#E0F7FA",
+    "border": "#00695C"
+  },
+  "Portfolio": {
+    "bg": "#ECEFF1",
+    "border": "#455A64"
+  },
+  "_plenary": {
+    "bg": "#ECEFF1",
+    "border": "#455A64"
+  },
+  "_default": {
+    "bg": "#FFFFFF",
+    "border": "#9E9E9E"
+  }
+}
