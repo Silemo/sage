@@ -1,0 +1,52 @@
+# JavaScript / TypeScript Conventions
+
+## Language Choice
+
+- Prefer TypeScript over plain JavaScript for all new code
+- Enable strict mode in `tsconfig.json`: `"strict": true`
+
+## Variables and Types
+
+- Use `const` by default, `let` when reassignment is needed, never `var`
+- Use `unknown` over `any` -- force explicit type narrowing
+- Use `interface` over `type` for object shapes where possible (interfaces are extendable and produce clearer error messages)
+- Use `??` (nullish coalescing) over `||` for default values -- `||` falsely triggers on `0`, `""`, and `false`
+- Use optional chaining (`?.`) to safely access nested properties
+
+## Modules
+
+- Use ESM imports (`import`/`export`) -- not CommonJS `require()`
+- Prefer named exports over default exports for discoverability and refactoring safety
+- Co-locate related exports; avoid barrel files (`index.ts`) that re-export everything
+
+## Async
+
+- Use `async`/`await` over raw promise chains (`.then().catch()`)
+- Always handle errors -- use `try`/`catch` or propagate with proper error types
+- Avoid fire-and-forget promises; always `await` or explicitly handle
+
+## Functions
+
+- Prefer arrow functions for callbacks and short expressions
+- Use regular `function` declarations for top-level named functions (hoisting, stack traces)
+- Keep functions small and focused
+
+## Error Handling
+
+- Throw `Error` objects (or subclasses), never throw strings or plain objects
+- Use discriminated unions or result types for expected failure cases
+- Validate external inputs at system boundaries (API handlers, CLI args)
+
+## Testing
+
+- **Framework**: Vitest or Jest
+- Use `describe`/`it` blocks with descriptive names
+- Prefer `toEqual` for deep comparisons, `toBe` for primitives
+- Mock external dependencies; avoid mocking internal modules
+- Name test files: `*.test.ts` or `*.spec.ts`
+
+## Style
+
+- Use Prettier for formatting, ESLint for linting
+- Prefer template literals over string concatenation
+- Avoid type assertions (`as`) unless narrowing from `unknown`

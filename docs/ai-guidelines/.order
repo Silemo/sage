@@ -1,0 +1,14 @@
+index
+general-rules
+security-and-compliance
+testing
+pilot-metrics
+copilot-features
+ignore-patterns
+csharp
+java
+python
+powershell
+javascript-typescript
+bash
+agents

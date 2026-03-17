@@ -1,0 +1,47 @@
+# Python Conventions
+
+## Target Platform
+
+- Python 3.11+
+- Use modern language features: `match` statement (3.10+), exception groups (3.11+), `tomllib` (3.11+)
+
+## Type Hints
+
+- Add type hints to all function signatures (parameters and return types)
+- Use `from __future__ import annotations` for forward references
+- Use `collections.abc` types (`Sequence`, `Mapping`) over concrete types in signatures
+- Use `X | None` syntax over `Optional[X]`
+
+## Data Modeling
+
+- Use `dataclasses` for simple structured data
+- Use Pydantic `BaseModel` for validated data, API schemas, and configuration
+- Prefer immutable data: `frozen=True` on dataclasses, Pydantic's immutable config
+
+## Style and Formatting
+
+- Follow PEP 8
+- Use `ruff` for linting and formatting
+- Prefer f-strings for string formatting
+- Use `pathlib.Path` over `os.path` for file system operations
+
+## Logging
+
+- Use the `logging` module -- never `print()` for operational output
+- Configure logging at the application entry point
+- Use structured log messages: `logger.info("User %s created", user_id)`
+
+## Error Handling
+
+- Use specific exception types
+- Prefer EAFP (Easier to Ask Forgiveness than Permission) over LBYL
+- Use context managers (`with`) for resource management
+
+## Testing
+
+- **Framework**: pytest
+- Use fixtures for setup and teardown
+- Use `@pytest.mark.parametrize` for data-driven tests
+- Use `pytest-mock` (wrapping `unittest.mock`) for mocking
+- Name test functions: `test_should_do_something_when_condition`
+- Aim for high coverage on business logic; skip trivial getters/setters

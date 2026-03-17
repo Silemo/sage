@@ -1,0 +1,103 @@
+# AI Ignore Patterns
+
+The following patterns are extracted by `sync-ai-configs` to generate `.aiignore`, `.claudeignore`, and `.cursorignore`. Only the content inside the code fence is extracted.
+
+```gitignore
+# Secrets and credentials
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+*.asc
+credentials.json
+**/secrets/
+**/vault/
+**/ServiceAccountKey.json
+
+# ASP.NET and Azure Functions secrets
+appsettings.*.json
+local.settings.json
+
+# Terraform — state and variable files contain real infrastructure data
+*.tfvars
+*.tfstate
+*.tfstate.backup
+**/.terraform/
+
+# Build artifacts
+**/bin/
+**/obj/
+**/target/
+**/build/
+**/dist/
+**/node_modules/
+**/__pycache__/
+**/*.egg-info/
+
+# IDE and tool configs (broad ignores)
+.idea/
+.vs/
+.vscode/
+*.suo
+*.user
+
+# JetBrains — specific files known to contain secrets or run-time credentials
+.idea/runConfigurations/
+.idea/dataSources.xml
+.idea/dataSources.local.xml
+.idea/httpRequests/
+.idea/workspace.xml
+.run/
+
+# Visual Studio / VS Code — launch and publish configs often embed env vars
+**/launchSettings.json
+**/*.pubxml
+**/*.pubxml.user
+.vscode/launch.json
+.vscode/tasks.json
+
+# Large binary files
+*.zip
+*.tar.gz
+*.jar
+*.dll
+*.exe
+*.so
+*.dylib
+
+# Database dumps and backup files — may contain real data
+**/*.sql
+**/*.dump
+**/dump*.sql
+**/*.bak
+**/*.backup
+
+# Metrics data — may contain developer names and session details
+.metrics/
+
+# Runtime artifacts — logs, caches, temp files
+**/logs/
+**/*.log
+**/tmp/
+**/temp/
+**/.cache/
+**/coverage/
+**/.nyc_output/
+**/.pytest_cache/
+
+# Generated AI config files (avoid AI reading its own instructions)
+CLAUDE.md
+AGENTS.md
+.github/copilot-instructions.md
+.github/instructions/
+.cursor/rules/
+.aiassistant/rules/
+.junie/guidelines.md
+docs/wiki/Reference/
+
+# Authoring sources (agents use the tool-specific generated copies instead)
+docs/ai-guidelines/skills/
+docs/ai-guidelines/agents/
+```

@@ -1,0 +1,6 @@
+# sync-ai-configs selection -- commit this file to share with your team.
+# Delete it (or run sync-ai-configs --reconfigure) to change selections.
+tools=claude,copilot
+languages=python,javascript-typescript
+copilot_extras=agents,prompts,skill
+copilot_agent_ide=vscode
