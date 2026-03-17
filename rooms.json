@@ -65,7 +65,7 @@
   },
   {
     "time": "11:30-16:00",
-    "location": "2E",
+    "location": "2B",
     "product": "EAF & Product UI & FHIR",
     "team": "MSFT",
     "vs": "PLM",
@@ -73,7 +73,7 @@
   },
   {
     "time": "11:30-16:00",
-    "location": "2B",
+    "location": "2C",
     "product": "PMS BEV",
     "team": "Accenture",
     "vs": "PLM",
@@ -81,7 +81,7 @@
   },
   {
     "time": "11:30-16:00",
-    "location": "2C",
+    "location": "2D",
     "product": "PMS DQ",
     "team": "Accenture",
     "vs": "PLM",
@@ -129,7 +129,7 @@
   },
   {
     "time": "11:30-16:00",
-    "location": "2D",
+    "location": "2E",
     "product": "IRIS",
     "team": "IRIS Core Team",
     "vs": "PLM",
