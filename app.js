@@ -1,4 +1,4 @@
-import { loadAllSources, normalizeRecord, parseCsv } from "./js/loader.js";
+import { loadAllSources } from "./js/loader.js";
 import { buildHierarchy, filterEvents } from "./js/filter.js";
 import { readState, writeState } from "./js/url-state.js";
 import { renderCards, renderErrorState, renderLegend } from "./js/renderer.js";
@@ -27,7 +27,6 @@ function getElements() {
     dateTabs: document.getElementById("dateTabs"),
     searchInput: document.getElementById("searchInput"),
     scopeSelect: document.getElementById("scopeSelect"),
-    importInput: document.getElementById("importInput"),
     statusMessage: document.getElementById("statusMessage"),
     legend: document.getElementById("legend"),
     rooms: document.getElementById("rooms-container"),
@@ -63,7 +62,7 @@ function updateTitle() {
   const { title, subtitle } = getElements();
   const matchingDayIndex = appState.hierarchy.dates.indexOf(appState.filterState.date);
   const dayLabel = matchingDayIndex >= 0 ? `Day ${matchingDayIndex + 1}` : "Schedule";
-  title.textContent = `PI Planning Schedule - ${dayLabel}`;
+  title.textContent = `SAGE - ${dayLabel}`;
   subtitle.textContent = appState.filterState.mode === "all"
     ? "All activities"
     : `Filtered view: ${getScopeSelectValue(appState.filterState).replace(":", " - ")}`;
@@ -169,55 +168,6 @@ function parseScopeValue(rawValue) {
   return { mode, value: value ?? "" };
 }
 
-function mergeImportedEvents(events) {
-  const mergedById = new Map(appState.allEvents.map((event) => [event.id, event]));
-  events.forEach((event) => {
-    mergedById.set(event.id, event);
-  });
-  appState.allEvents = [...mergedById.values()];
-  appState.hierarchy = buildHierarchy(appState.allEvents);
-}
-
-async function handleImportChange(event) {
-  const [file] = event.target.files ?? [];
-  if (!file) {
-    return;
-  }
-
-  const fileText = await file.text();
-  let rawRecords = [];
-
-  if (file.name.toLowerCase().endsWith(".json")) {
-    rawRecords = JSON.parse(fileText);
-  } else {
-    rawRecords = parseCsv(fileText);
-  }
-
-  const importedEvents = [];
-  const importErrors = [];
-
-  rawRecords.forEach((rawRecord) => {
-    const { record, errors } = normalizeRecord(rawRecord, file.name, "");
-    if (record) {
-      importedEvents.push(record);
-    } else {
-      importErrors.push(errors.join(", "));
-    }
-  });
-
-  mergeImportedEvents(importedEvents);
-  buildControls(appState.hierarchy, appState.filterState);
-  applyCurrentFilters();
-
-  if (importErrors.length > 0) {
-    setStatusMessage(`Imported ${importedEvents.length} rows; skipped ${importErrors.length} invalid rows.`, "warning");
-  } else {
-    setStatusMessage(`Imported ${importedEvents.length} rows from ${file.name}.`, "success");
-  }
-
-  event.target.value = "";
-}
-
 async function initializeApp() {
   const [sourcesConfig, colors] = await Promise.all([
     fetchJson("./config/sources.json"),
@@ -233,7 +183,7 @@ async function initializeApp() {
   buildControls(appState.hierarchy, appState.filterState);
   applyCurrentFilters();
 
-  const { dateTabs, searchInput, scopeSelect, importInput, rooms } = getElements();
+  const { dateTabs, searchInput, scopeSelect, rooms } = getElements();
 
   dateTabs.addEventListener("click", (clickEvent) => {
     const button = clickEvent.target.closest("button[data-date]");
@@ -257,8 +207,6 @@ async function initializeApp() {
     appState.filterState.value = scope.value;
     applyCurrentFilters();
   });
-
-  importInput.addEventListener("change", handleImportChange);
 
   if (appState.indicatorTimer !== null) {
     window.clearInterval(appState.indicatorTimer);

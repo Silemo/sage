@@ -186,19 +186,55 @@ export function normalizeRecord(rawRecord, sourceName = "unknown", defaultDate =
   };
 }
 
-export async function loadJsonSource(sourceConfig) {
-  const response = await fetch(sourceConfig.file);
+async function fetchSourceText(path) {
+  const response = await fetch(path);
 
   if (!response.ok) {
-    throw new Error(`Failed to load ${sourceConfig.file}: ${response.status}`);
+    throw new Error(`Failed to load ${path}: ${response.status}`);
+  }
+
+  return response.text();
+}
+
+export async function loadJsonSource(path) {
+  const response = await fetch(path);
+
+  if (!response.ok) {
+    throw new Error(`Failed to load ${path}: ${response.status}`);
   }
 
   const data = await response.json();
   if (!Array.isArray(data)) {
-    throw new Error(`Expected an array in ${sourceConfig.file}`);
+    throw new Error(`Expected an array in ${path}`);
   }
 
   return data;
+}
+
+async function loadSourceRecords(sourceConfig) {
+  const sourceName = normalizeWhitespace(sourceConfig.name);
+  const csvPath = `data/csv/${sourceName}.csv`;
+  const jsonPath = `data/json/${sourceName}.json`;
+
+  try {
+    const csvText = await fetchSourceText(csvPath);
+    return {
+      records: parseCsv(csvText),
+      sourceLabel: csvPath,
+    };
+  } catch (csvError) {
+    try {
+      const jsonRecords = await loadJsonSource(jsonPath);
+      return {
+        records: jsonRecords,
+        sourceLabel: jsonPath,
+      };
+    } catch (jsonError) {
+      const csvMessage = csvError instanceof Error ? csvError.message : `Failed to load ${csvPath}`;
+      const jsonMessage = jsonError instanceof Error ? jsonError.message : `Failed to load ${jsonPath}`;
+      throw new Error(`${csvMessage}; ${jsonMessage}`);
+    }
+  }
 }
 
 export async function loadAllSources(sourcesConfig) {
@@ -208,11 +244,11 @@ export async function loadAllSources(sourcesConfig) {
 
   for (const sourceConfig of sourcesConfig.sources ?? []) {
     try {
-      const records = await loadJsonSource(sourceConfig);
+      const { records, sourceLabel } = await loadSourceRecords(sourceConfig);
       for (const rawRecord of records) {
-        const { record, errors: recordErrors } = normalizeRecord(rawRecord, sourceConfig.file, sourceConfig.defaultDate);
+        const { record, errors: recordErrors } = normalizeRecord(rawRecord, sourceLabel, sourceConfig.defaultDate);
         if (!record) {
-          errors.push(`${sourceConfig.file}: ${recordErrors.join(", ")}`);
+          errors.push(`${sourceLabel}: ${recordErrors.join(", ")}`);
           continue;
         }
         if (!seenIds.has(record.id)) {
@@ -221,7 +257,7 @@ export async function loadAllSources(sourcesConfig) {
         }
       }
     } catch (error) {
-      errors.push(error instanceof Error ? error.message : `Failed to load ${sourceConfig.file}`);
+      errors.push(error instanceof Error ? error.message : `Failed to load source ${sourceConfig.name}`);
     }
   }
 
