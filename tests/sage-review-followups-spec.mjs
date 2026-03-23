@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, "..");
 const baseUrl = process.env.SAGE_TEST_BASE_URL ?? "http://127.0.0.1:8000/";
 const sourceScriptPath = path.join(workspaceRoot, "tests", "sage-spec-requirements.mjs");
-const day2JsonPath = path.join(workspaceRoot, "data", "json", "day2.json");
+const day2JsonPath = path.join(workspaceRoot, "data", "json", "2026-03-18.json");
 const readmePath = path.join(workspaceRoot, "README.md");
 
 const results = [];

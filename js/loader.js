@@ -212,9 +212,9 @@ export async function loadJsonSource(path) {
 }
 
 async function loadSourceRecords(sourceConfig) {
-  const sourceName = normalizeWhitespace(sourceConfig.name);
-  const csvPath = `data/csv/${sourceName}.csv`;
-  const jsonPath = `data/json/${sourceName}.json`;
+  const fileStem = normalizeWhitespace(sourceConfig.file ?? sourceConfig.defaultDate);
+  const csvPath = `data/csv/${fileStem}.csv`;
+  const jsonPath = `data/json/${fileStem}.json`;
 
   try {
     const csvText = await fetchSourceText(csvPath);
@@ -257,7 +257,8 @@ export async function loadAllSources(sourcesConfig) {
         }
       }
     } catch (error) {
-      errors.push(error instanceof Error ? error.message : `Failed to load source ${sourceConfig.name}`);
+      const sourceLabel = sourceConfig.label ?? sourceConfig.defaultDate;
+      errors.push(error instanceof Error ? error.message : `Failed to load source ${sourceLabel}`);
     }
   }
 

@@ -1,11 +1,11 @@
 {
   "sources": [
     {
-      "name": "day1",
+      "label": "day1",
       "defaultDate": "2026-03-17"
     },
     {
-      "name": "day2",
+      "label": "day2",
       "defaultDate": "2026-03-18"
     }
   ]

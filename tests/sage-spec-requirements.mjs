@@ -50,8 +50,8 @@ async function fetchJson(relativePath) {
   return response.json();
 }
 
-async function withTemporaryCsv(sourceName, content, testFn) {
-  const csvPath = path.join(workspaceRoot, "data", "csv", `${sourceName}.csv`);
+async function withTemporaryCsv(fileStem, content, testFn) {
+  const csvPath = path.join(workspaceRoot, "data", "csv", `${fileStem}.csv`);
 
   await writeFile(csvPath, content, "utf8");
   try {
@@ -79,12 +79,12 @@ await runTest("repo uses canonical data folders and logical source names", async
   assert.deepEqual(
     sources.sources.map((source) => Object.keys(source).sort()),
     [
-      ["defaultDate", "name"],
-      ["defaultDate", "name"],
+      ["defaultDate", "label"],
+      ["defaultDate", "label"],
     ],
   );
   assert.deepEqual(
-    sources.sources.map((source) => source.name),
+    sources.sources.map((source) => source.label),
     ["day1", "day2"],
   );
 });
@@ -108,7 +108,7 @@ await runTest("loader continues loading later sources when one source is missing
   const augmentedSources = {
     sources: [
       sources.sources[0],
-      { name: "missing-day", defaultDate: "2026-03-19" },
+      { label: "missing-day", defaultDate: "2026-03-19" },
       sources.sources[1],
     ],
   };
@@ -116,8 +116,8 @@ await runTest("loader continues loading later sources when one source is missing
 
   assert.equal(result.events.length, baselineResult.events.length);
   assert.equal(result.errors.length, 1);
-  assert.match(result.errors[0], /data\/csv\/missing-day\.csv/);
-  assert.match(result.errors[0], /data\/json\/missing-day\.json/);
+  assert.match(result.errors[0], /data\/csv\/2026-03-19\.csv/);
+  assert.match(result.errors[0], /data\/json\/2026-03-19\.json/);
   assert.ok(result.events.some((event) => event.date === "2026-03-18"));
 });
 
@@ -128,11 +128,12 @@ await runTest("loader skips malformed committed CSV rows without aborting the sc
     "2026-03-17,10:00,11:10,Plenary PLM,PLM,Missing Location,,Plenary",
   ].join("\n");
 
-  await withTemporaryCsv("day1", malformedCsv, async () => {
+  await withTemporaryCsv("2026-03-17", malformedCsv, async () => {
     const sources = await fetchJson("config/sources.json");
+    const baselineDay2Count = (await loadAllSources(sources)).events.filter((event) => event.date === "2026-03-18").length;
     const result = await loadAllSources(sources);
 
-    assert.equal(result.events.length, 37);
+    assert.equal(result.events.length, 1 + baselineDay2Count);
     assert.equal(result.errors.length, 1);
     assert.ok(result.events.some((event) => event.topics === "CSV Plenary"));
     assert.ok(result.events.some((event) => event.date === "2026-03-18"));
