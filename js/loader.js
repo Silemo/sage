@@ -1,4 +1,4 @@
-const REQUIRED_FIELDS = ["date", "start", "end", "team", "topics", "location", "type"];
+const REQUIRED_FIELDS = ["date", "start", "end", "name", "topics", "location", "type"];
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^\d{2}:\d{2}$/;
 const VS_ALIASES = {
@@ -29,6 +29,18 @@ export function normalizeTeamName(teamName) {
   return TEAM_ALIASES[normalized] ?? normalized;
 }
 
+function parseTeams(rawTeams) {
+  const normalized = normalizeWhitespace(rawTeams);
+  if (normalized === "") {
+    return [];
+  }
+
+  return normalized
+    .split(",")
+    .map((teamName) => normalizeTeamName(teamName))
+    .filter((teamName) => teamName !== "");
+}
+
 function normalizeType(type) {
   const normalized = normalizeWhitespace(type);
   if (normalized === "") {
@@ -38,13 +50,25 @@ function normalizeType(type) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function normalizeTimeValue(timeValue) {
+  const normalized = normalizeWhitespace(timeValue);
+  const match = normalized.match(/^(\d{1,2}):(\d{2})$/);
+
+  if (!match) {
+    return normalized;
+  }
+
+  const [, hours, minutes] = match;
+  return `${hours.padStart(2, "0")}:${minutes}`;
+}
+
 function splitTimeRange(timeRange) {
   const normalized = normalizeWhitespace(timeRange);
   if (!normalized.includes("-")) {
     return { start: "", end: "" };
   }
 
-  const [start, end] = normalized.split("-").map((part) => normalizeWhitespace(part));
+  const [start, end] = normalized.split("-").map((part) => normalizeTimeValue(part));
   return { start, end };
 }
 
@@ -114,7 +138,7 @@ export function parseCsv(csvText) {
 }
 
 export function createEventId(record) {
-  const seed = [record.date, record.start, record.end, record.team, record.location, record.topics].join("|");
+  const seed = [record.date, record.start, record.end, record.name, record.location, record.topics].join("|");
   let hash = 0;
 
   for (let index = 0; index < seed.length; index += 1) {
@@ -157,10 +181,11 @@ export function normalizeRecord(rawRecord, sourceName = "unknown", defaultDate =
   const date = normalizeWhitespace(rawRecord.date) || defaultDate;
   const normalizedRecord = {
     date: normalizeWhitespace(date),
-    start: normalizeWhitespace(rawRecord.start) || splitTime.start,
-    end: normalizeWhitespace(rawRecord.end) || splitTime.end,
-    team: normalizeTeamName(rawRecord.team),
-    vs: normalizeVsName(rawRecord.vs),
+    start: normalizeTimeValue(rawRecord.start) || splitTime.start,
+    end: normalizeTimeValue(rawRecord.end) || splitTime.end,
+    name: normalizeWhitespace(rawRecord.name ?? rawRecord.team),
+    teams: parseTeams(rawRecord.teams ?? rawRecord.team),
+    vs: normalizeVsName(rawRecord.vs ?? rawRecord["value stream"]),
     topics: normalizeWhitespace(rawRecord.topics ?? rawRecord.product),
     location: normalizeWhitespace(rawRecord.location),
     type: normalizeType(rawRecord.type),

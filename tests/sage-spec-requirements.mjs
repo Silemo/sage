@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, rm, writeFile } from "node:fs/promises";
+import { access, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -52,12 +52,17 @@ async function fetchJson(relativePath) {
 
 async function withTemporaryCsv(fileStem, content, testFn) {
   const csvPath = path.join(workspaceRoot, "data", "csv", `${fileStem}.csv`);
+  const originalContent = await readFile(csvPath, "utf8").catch(() => null);
 
   await writeFile(csvPath, content, "utf8");
   try {
     await testFn();
   } finally {
-    await rm(csvPath, { force: true });
+    if (originalContent === null) {
+      await rm(csvPath, { force: true });
+    } else {
+      await writeFile(csvPath, originalContent, "utf8");
+    }
   }
 }
 
@@ -89,13 +94,19 @@ await runTest("repo uses canonical data folders and logical source names", async
   );
 });
 
-await runTest("loader falls back to committed JSON when CSV files are absent", async () => {
+await runTest("loader accepts committed CSV data and keeps legacy JSON fallback compatible", async () => {
   const sources = await fetchJson("config/sources.json");
   const result = await loadAllSources(sources);
 
   assert.equal(result.errors.length, 0);
   assert.ok(result.events.length > 0);
-  assert.ok(result.events.every((event) => event.source.startsWith("data/json/")));
+  const csvEvents = result.events.filter((event) => event.source === "data/csv/2026-03-17.csv");
+  const jsonEvents = result.events.filter((event) => event.source === "data/json/2026-03-18.json");
+
+  assert.ok(csvEvents.length > 0);
+  assert.ok(jsonEvents.length > 0);
+  assert.ok(csvEvents.every((event) => typeof event.name === "string" && Array.isArray(event.teams)));
+  assert.ok(jsonEvents.every((event) => typeof event.name === "string" && Array.isArray(event.teams)));
   assert.deepEqual(
     [...new Set(result.events.map((event) => event.date))].sort(),
     ["2026-03-17", "2026-03-18"],
@@ -123,9 +134,9 @@ await runTest("loader continues loading later sources when one source is missing
 
 await runTest("loader skips malformed committed CSV rows without aborting the schedule", async () => {
   const malformedCsv = [
-    "date,start,end,team,vs,topics,location,type",
-    "2026-03-17,09:00,09:50,ALL,,CSV Plenary,Auditorium,Plenary",
-    "2026-03-17,10:00,11:10,Plenary PLM,PLM,Missing Location,,Plenary",
+    "time,location,topics,name,value stream,teams,type",
+    "09:00 - 09:50,Auditorium,CSV Plenary,Overall PI Plenary,ALL,,Plenary",
+    "10:00 - 11:10,,Missing Location,VS PLM Plenary,PLM,Marvels,Plenary",
   ].join("\n");
 
   await withTemporaryCsv("2026-03-17", malformedCsv, async () => {
@@ -135,9 +146,9 @@ await runTest("loader skips malformed committed CSV rows without aborting the sc
 
     assert.equal(result.events.length, 1 + baselineDay2Count);
     assert.equal(result.errors.length, 1);
-    assert.ok(result.events.some((event) => event.topics === "CSV Plenary"));
+    assert.ok(result.events.some((event) => event.name === "Overall PI Plenary" && event.teams.length === 0));
     assert.ok(result.events.some((event) => event.date === "2026-03-18"));
-    assert.ok(result.events.every((event) => event.topics !== "Missing Location"));
+    assert.ok(result.events.every((event) => event.name !== "VS PLM Plenary"));
     assert.match(result.errors[0], /Missing location/);
   });
 });

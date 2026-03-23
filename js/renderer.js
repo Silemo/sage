@@ -37,7 +37,7 @@ export function createRoomCard(event, colorMap) {
 
   const team = document.createElement("h2");
   team.className = "card-team";
-  team.textContent = event.team;
+  team.textContent = event.name;
 
   const location = createDetailRow("Location", event.location, "card-location");
   const topics = createDetailRow("Topics", event.topics, "card-topics");

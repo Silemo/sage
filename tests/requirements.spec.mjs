@@ -1,13 +1,10 @@
 import assert from "node:assert/strict";
-import { access, readFile, rm, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-import { loadAllSources } from "../js/loader.js";
+import { createEventId, normalizeRecord } from "../js/loader.js";
+import { buildHierarchy, filterEvents, isGlobalPlenary } from "../js/filter.js";
+import { createRoomCard } from "../js/renderer.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, "..");
-const baseUrl = process.env.SAGE_TEST_BASE ?? "http://127.0.0.1:8000/";
+const baseUrl = process.env.SAGE_TEST_BASE_URL ?? "http://127.0.0.1:8000/";
 const nativeFetch = globalThis.fetch;
 
 if (typeof nativeFetch !== "function") {
@@ -31,6 +28,40 @@ async function runTest(name, testFn) {
   }
 }
 
+function installMinimalDom() {
+  const previousDocument = globalThis.document;
+
+  const createElement = (tagName) => ({
+    tagName,
+    className: "",
+    textContent: "",
+    children: [],
+    style: {
+      values: {},
+      setProperty(name, value) {
+        this.values[name] = value;
+      },
+    },
+    append(...nodes) {
+      this.children.push(...nodes);
+    },
+    appendChild(node) {
+      this.children.push(node);
+    },
+  });
+
+  globalThis.document = {
+    createElement,
+    createTextNode(text) {
+      return { nodeType: "text", textContent: text };
+    },
+  };
+
+  return () => {
+    globalThis.document = previousDocument;
+  };
+}
+
 async function testShellBrandingAndNoUpload() {
   const response = await nativeFetch(new URL("index.html", baseUrl));
   assert.equal(response.ok, true, "index.html should be served successfully");
@@ -42,61 +73,171 @@ async function testShellBrandingAndNoUpload() {
   assert.doesNotMatch(html, /importInput/, "legacy import input should be removed from the HTML shell");
 }
 
-async function testRepoDataLayout() {
-  await access(path.join(repoRoot, "data", "json", "day1.json"));
-  await access(path.join(repoRoot, "data", "json", "day2.json"));
-  await access(path.join(repoRoot, "data", "csv", ".gitkeep"));
+async function testNormalizeRecordSupportsCsvAndLegacyJson() {
+  const csvResult = normalizeRecord({
+    time: "10:00 - 11:30",
+    location: "2C",
+    topics: "PI Objectives",
+    name: "VS PLM Plenary",
+    "value stream": "PLM",
+    teams: "Marvels,Avengers",
+    type: "Plenary",
+  }, "data/csv/2026-03-17.csv", "2026-03-17");
 
-  await assert.rejects(access(path.join(repoRoot, "rooms.json")), "legacy root day1 file should be absent");
-  await assert.rejects(access(path.join(repoRoot, "room2.json")), "legacy root day2 file should be absent");
+  assert.equal(csvResult.errors.length, 0);
+  assert.equal(csvResult.record?.name, "VS PLM Plenary");
+  assert.deepEqual(csvResult.record?.teams, ["Marvels", "Avengers"]);
+  assert.equal(csvResult.record?.vs, "PLM");
+  assert.equal(csvResult.record?.date, "2026-03-17");
+
+  const legacyResult = normalizeRecord({
+    time: "11:30-16:00",
+    location: "1B",
+    topics: "RPM",
+    team: "Marvels",
+    vs: "PLM",
+    type: "Breakout",
+  }, "data/json/2026-03-18.json", "2026-03-18");
+
+  assert.equal(legacyResult.errors.length, 0);
+  assert.equal(legacyResult.record?.name, "Marvels");
+  assert.deepEqual(legacyResult.record?.teams, ["Marvels"]);
+  assert.equal(legacyResult.record?.vs, "PLM");
+
+  const teamlessResult = normalizeRecord({
+    time: "09:45 - 10:00",
+    location: "Lobby",
+    topics: "Small talk",
+    name: "Coffee break",
+    "value stream": "ALL",
+    teams: "",
+    type: "Coffee",
+  }, "data/csv/2026-03-17.csv", "2026-03-17");
+
+  assert.equal(teamlessResult.errors.length, 0);
+  assert.deepEqual(teamlessResult.record?.teams, []);
 }
 
-async function testMissingSourceResilience() {
-  const sources = {
-    sources: [
-      { name: "missing-day", defaultDate: "2026-03-19" },
-      { name: "day1", defaultDate: "2026-03-17" },
-      { name: "day2", defaultDate: "2026-03-18" },
-    ],
+async function testHierarchyAndTeamFilteringFollowNewContract() {
+  const events = [
+    {
+      date: "2026-03-17",
+      start: "08:55",
+      end: "09:45",
+      name: "Overall PI Plenary",
+      teams: [],
+      vs: "Portfolio",
+      topics: "PI Objectives",
+      location: "Auditorium",
+      type: "Plenary",
+    },
+    {
+      date: "2026-03-17",
+      start: "10:00",
+      end: "11:30",
+      name: "VS PLM Plenary",
+      teams: ["Marvels", "Avengers"],
+      vs: "PLM",
+      topics: "PI Objectives",
+      location: "2C",
+      type: "Plenary",
+    },
+    {
+      date: "2026-03-17",
+      start: "11:30",
+      end: "16:00",
+      name: "Marvels",
+      teams: ["Marvels"],
+      vs: "PLM",
+      topics: "RPM",
+      location: "1B",
+      type: "Breakout",
+    },
+    {
+      date: "2026-03-17",
+      start: "11:30",
+      end: "16:00",
+      name: "Transformers",
+      teams: ["Transformers"],
+      vs: "PLM",
+      topics: "RPM",
+      location: "1E",
+      type: "Breakout",
+    },
+    {
+      date: "2026-03-17",
+      start: "09:45",
+      end: "10:00",
+      name: "Coffee break",
+      teams: [],
+      vs: "Portfolio",
+      topics: "Small talk",
+      location: "Lobby",
+      type: "Coffee",
+    },
+  ];
+
+  const hierarchy = buildHierarchy(events);
+  assert.deepEqual(hierarchy.valueStreams.PLM, ["Avengers", "Marvels", "Transformers"]);
+  assert.equal(isGlobalPlenary(events[0]), true);
+
+  const filtered = filterEvents(events, {
+    date: "2026-03-17",
+    mode: "team",
+    value: "Marvels",
+    search: "",
+  });
+
+  assert.deepEqual(
+    filtered.map((event) => event.name),
+    ["Overall PI Plenary", "Coffee break", "VS PLM Plenary", "Marvels"],
+  );
+  assert.equal(filtered.some((event) => event.name === "Transformers"), false);
+}
+
+async function testEventIdAndRendererUseMeetingName() {
+  const recordA = {
+    date: "2026-03-17",
+    start: "11:30",
+    end: "16:00",
+    name: "Marvels",
+    location: "1B",
+    topics: "RPM",
+  };
+  const recordB = {
+    ...recordA,
+    name: "Transformers",
   };
 
-  const result = await loadAllSources(sources);
+  assert.notEqual(createEventId(recordA), createEventId(recordB));
 
-  assert.equal(result.events.length, 72, "existing sources should still load when one configured source is missing");
-  assert.equal(result.errors.length, 1, "a single missing source should report one warning entry");
-  assert.match(result.errors[0], /data\/csv\/missing-day\.csv/, "error should mention the missing CSV path");
-  assert.match(result.errors[0], /data\/json\/missing-day\.json/, "error should mention the missing JSON fallback path");
-}
-
-async function testMalformedCommittedCsvHandling() {
-  const csvPath = path.join(repoRoot, "data", "csv", "day1.csv");
-  const csvContents = [
-    "date,start,end,team,vs,topics,location,type",
-    "2026-03-17,09:00,09:50,ALL,,CSV Plenary,Auditorium,Plenary",
-    "2026-03-17,10:00,11:10,Plenary PLM,PLM,CSV Objectives,,Plenary",
-  ].join("\n");
-
-  await writeFile(csvPath, csvContents, "utf8");
-
+  const restoreDom = installMinimalDom();
   try {
-    const sources = JSON.parse(await readFile(path.join(repoRoot, "config", "sources.json"), "utf8"));
-    const result = await loadAllSources(sources);
+    const card = createRoomCard({
+      start: "11:30",
+      end: "16:00",
+      name: "Marvels Planning",
+      teams: ["Marvels"],
+      location: "1B",
+      topics: "RPM",
+      vs: "PLM",
+      type: "Breakout",
+    }, {
+      PLM: { bg: "#fff", border: "#000" },
+      _default: { bg: "#fff", border: "#000" },
+    });
 
-    assert.equal(result.events.length, 37, "valid committed CSV rows should load and invalid rows should be skipped");
-    assert.equal(result.errors.length, 1, "one malformed committed CSV row should yield one warning");
-    assert.match(result.errors[0], /Missing location/, "warning should explain why the malformed row was skipped");
-    assert.equal(result.events.filter((event) => event.source === "data/csv/day1.csv").length, 1, "CSV should take precedence over JSON for the same source");
-    assert.equal(result.events.some((event) => event.topics === "CSV Plenary"), true, "CSV-backed content should appear in the loaded events");
+    assert.equal(card.children[1].textContent, "Marvels Planning");
   } finally {
-    await rm(csvPath, { force: true });
+    restoreDom();
   }
 }
 
 const tests = [
   ["shell_shows_sage_and_hides_upload_control", testShellBrandingAndNoUpload],
-  ["repo_uses_data_folder_layout", testRepoDataLayout],
-  ["loadAllSources_continues_when_one_source_is_missing", testMissingSourceResilience],
-  ["loadAllSources_prefers_csv_and_skips_invalid_committed_rows", testMalformedCommittedCsvHandling],
+  ["normalizeRecord_supports_new_csv_and_legacy_json_contracts", testNormalizeRecordSupportsCsvAndLegacyJson],
+  ["hierarchy_and_team_filter_follow_name_and_teams_rules", testHierarchyAndTeamFilteringFollowNewContract],
+  ["event_id_and_renderer_use_meeting_name", testEventIdAndRendererUseMeetingName],
 ];
 
 const results = [];

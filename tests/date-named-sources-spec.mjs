@@ -86,8 +86,8 @@ await runTest("loader prefers a configured CSV file over the matching date-named
   const sources = await fetchJson("config/sources.json");
   const csvPath = path.join(workspaceRoot, "data", "csv", "2026-03-17.csv");
   const csvContent = [
-    "date,start,end,team,vs,topics,location,type",
-    "2026-03-17,09:00,09:50,ALL,,CSV Override,Auditorium,Plenary",
+    "time,location,topics,name,value stream,teams,type",
+    "09:00 - 09:50,Auditorium,CSV Override,Overall PI Plenary,ALL,,Plenary",
   ].join("\n");
 
   await withTemporaryFile(csvPath, csvContent, async () => {
@@ -96,7 +96,7 @@ await runTest("loader prefers a configured CSV file over the matching date-named
 
     assert.equal(result.errors.length, 0);
     assert.equal(result.events.length, 1 + baselineDay2Count);
-    assert.ok(result.events.some((event) => event.topics === "CSV Override" && event.source === "data/csv/2026-03-17.csv"));
+    assert.ok(result.events.some((event) => event.name === "Overall PI Plenary" && event.teams.length === 0 && event.source === "data/csv/2026-03-17.csv"));
     assert.ok(result.events.every((event) => !(event.date === "2026-03-17" && event.source === "data/json/2026-03-17.json")));
   });
 });

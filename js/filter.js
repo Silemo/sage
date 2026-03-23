@@ -2,10 +2,14 @@ function normalizeSearch(value) {
   return String(value ?? "").trim().toLowerCase();
 }
 
+function isSelectableTeamName(teamName) {
+  return teamName !== "ALL" && teamName !== "Every One" && !teamName.startsWith("Plenary ");
+}
+
 export function isGlobalPlenary(event) {
   return event.type === "Plenary" && (
-    event.team === "ALL" ||
-    event.team === "Every One" ||
+    event.name === "ALL" ||
+    event.name === "Every One" ||
     event.vs === "" ||
     event.vs === "Portfolio"
   );
@@ -15,8 +19,8 @@ export function isVsPlenary(event, valueStream) {
   return event.type === "Plenary" && event.vs === valueStream && !isGlobalPlenary(event);
 }
 
-function isSelectableTeam(event) {
-  return event.team !== "ALL" && event.team !== "Every One" && !event.team.startsWith("Plenary ");
+function hasSelectableTeams(event) {
+  return event.teams.some((teamName) => isSelectableTeamName(teamName));
 }
 
 export function sortEventsByStart(events) {
@@ -31,12 +35,12 @@ export function sortEventsByStart(events) {
       return endComparison;
     }
 
-    return left.team.localeCompare(right.team);
+    return left.name.localeCompare(right.name);
   });
 }
 
 export function getTeamValueStream(events, teamName) {
-  const match = events.find((event) => event.team === teamName && isSelectableTeam(event));
+  const match = events.find((event) => event.teams.includes(teamName) && hasSelectableTeams(event));
   return match?.vs ?? "";
 }
 
@@ -49,7 +53,7 @@ export function buildHierarchy(events) {
     dates.add(event.date);
     types.add(event.type);
 
-    if (!event.vs || !isSelectableTeam(event)) {
+    if (!event.vs || !hasSelectableTeams(event) || isGlobalPlenary(event)) {
       return;
     }
 
@@ -57,7 +61,11 @@ export function buildHierarchy(events) {
       valueStreamMap.set(event.vs, new Set());
     }
 
-    valueStreamMap.get(event.vs).add(event.team);
+    event.teams.forEach((teamName) => {
+      if (isSelectableTeamName(teamName)) {
+        valueStreamMap.get(event.vs).add(teamName);
+      }
+    });
   });
 
   const valueStreams = {};
@@ -78,7 +86,7 @@ function matchesSearch(event, searchText) {
     return true;
   }
 
-  return [event.team, event.vs, event.location, event.topics]
+  return [event.name, event.teams.join(" "), event.vs, event.location, event.topics]
     .some((value) => normalizeSearch(value).includes(search));
 }
 
@@ -104,7 +112,8 @@ export function filterEvents(events, filterState) {
     if (filterState.mode === "team") {
       return isGlobalPlenary(event)
         || (teamValueStream !== "" && isVsPlenary(event, teamValueStream))
-        || event.team === filterState.value;
+        || event.teams.includes(filterState.value)
+        || event.teams.length === 0;
     }
 
     return true;
