@@ -42,6 +42,7 @@ function installMinimalDom() {
     className: "",
     textContent: "",
     children: [],
+    dataset: {},
     style: {
       values: {},
       setProperty(name, value) {
