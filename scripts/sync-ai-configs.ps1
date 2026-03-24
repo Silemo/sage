@@ -1,6 +1,6 @@
 ﻿#!/usr/bin/env pwsh
 # sync-ai-configs.ps1 -- Generate AI tool configs from canonical docs in docs/ai-guidelines/
-# Flags: --all, --reconfigure, --new-project, --wiki-only (wiki Reference pages only), --clean [--yes/-y]
+# Flags: --all, --reconfigure, --ide=IDE, --new-project, --wiki-only (wiki Reference pages only), --clean [--yes/-y]
 
 $ErrorActionPreference = "Stop"
 
@@ -65,9 +65,9 @@ $CustomAgents = [ordered]@{
     "ema-backlog-manager" = @{
         Description      = "SAFe backlog expert -- generate, refine, and publish structured Azure DevOps backlogs from natural language ideas"
         Model            = "'GPT-5.4'"
-        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'editFiles', 'azure-devops/*']"
-        ToolsJetBrains   = "['create_file', 'insert_edit_into_file', 'read_file', 'file_search']"
-        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'editfiles', 'readfile', 'azure-devops/*']"
+        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
         Agents           = "[]"
         GuidelinesScope  = "none"
         IncludePipelineOverview = $false
@@ -77,9 +77,9 @@ $CustomAgents = [ordered]@{
     "ema-brainstormer" = @{
         Description      = "Explore codebase, brainstorm with the user, then produce structured requirements"
         Model            = "'GPT-5 mini'"
-        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'fileSearch', 'textSearch']"
-        ToolsJetBrains   = "['create_file', 'insert_edit_into_file', 'read_file', 'file_search', 'grep_search']"
-        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'editfiles', 'readfile', 'getwebpages', 'fileSearch', 'textSearch']"
+        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
         Agents           = "['ema-architect', 'ema-planner-lite']"
         GuidelinesScope  = "security"
         IncludePipelineOverview = $false
@@ -92,9 +92,9 @@ $CustomAgents = [ordered]@{
     "ema-architect" = @{
         Description      = "Explore the codebase, evaluate design options, and produce an architecture design document"
         Model            = "'Claude Opus 4.6'"
-        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'usages', 'fileSearch', 'textSearch']"
-        ToolsJetBrains   = "['create_file', 'insert_edit_into_file', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'show_content', 'open_file']"
-        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'getwebpages', 'codebase', 'githubRepo', 'usages', 'fileSearch', 'textSearch']"
+        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
         Agents           = "['ema-planner']"
         GuidelinesScope  = "full"
         IncludePipelineOverview = $true
@@ -106,9 +106,9 @@ $CustomAgents = [ordered]@{
     "ema-planner" = @{
         Description      = "Produce a detailed step-by-step implementation plan from an architecture design"
         Model            = "'GPT-5.4'"
-        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'usages', 'fileSearch', 'textSearch']"
-        ToolsJetBrains   = "['create_file', 'insert_edit_into_file', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'show_content', 'open_file']"
-        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'getwebpages', 'codebase', 'githubRepo', 'usages', 'fileSearch', 'textSearch']"
+        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
         Agents           = "['ema-implementer']"
         GuidelinesScope  = "full"
         IncludePipelineOverview = $true
@@ -120,9 +120,9 @@ $CustomAgents = [ordered]@{
     "ema-planner-lite" = @{
         Description      = "Quick planning for simple changes -- bug fixes, small features, config changes"
         Model            = "'Gemini 3 Flash'"
-        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'usages', 'fileSearch', 'textSearch']"
-        ToolsJetBrains   = "['create_file', 'insert_edit_into_file', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'show_content', 'open_file']"
-        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'getwebpages', 'codebase', 'githubRepo', 'usages', 'fileSearch', 'textSearch']"
+        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
         Agents           = "['ema-implementer-lite']"
         GuidelinesScope  = "full"
         IncludePipelineOverview = $true
@@ -134,9 +134,9 @@ $CustomAgents = [ordered]@{
     "ema-implementer-lite" = @{
         Description      = "Lightweight implementation for simple changes -- executes short plans from planner-lite"
         Model            = "'Gemini 3 Flash'"
-        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
-        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'run_in_terminal', 'get_terminal_output', 'get_errors', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'run_subagent']"
-        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
+        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
         Agents           = "['ema-tester']"
         GuidelinesScope  = "full"
         IncludePipelineOverview = $true
@@ -148,9 +148,9 @@ $CustomAgents = [ordered]@{
     "ema-implementer" = @{
         Description      = "Execute an implementation plan step-by-step -- writing code, running tests, staging changes"
         Model            = "'GPT-5.4'"
-        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
-        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'run_in_terminal', 'get_terminal_output', 'get_errors', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'run_subagent']"
-        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
+        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
         Agents           = "['ema-tester']"
         GuidelinesScope  = "full"
         IncludePipelineOverview = $true
@@ -162,9 +162,9 @@ $CustomAgents = [ordered]@{
     "ema-tester" = @{
         Description      = "Write tests from the spec, run the full test suite, verify coverage and quality"
         Model            = "'GPT-5.4'"
-        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
-        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'run_in_terminal', 'get_terminal_output', 'get_errors', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'run_subagent']"
-        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
+        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
         Agents           = "['ema-reviewer']"
         GuidelinesScope  = "full"
         IncludePipelineOverview = $true
@@ -176,9 +176,9 @@ $CustomAgents = [ordered]@{
     "ema-reviewer" = @{
         Description      = "Review code against EMA guidelines, check security, quality, testing, and plan adherence"
         Model            = "'Claude Sonnet 4.6'"
-        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'changes', 'usages', 'problems', 'fileSearch', 'textSearch']"
-        ToolsJetBrains   = "['create_file', 'insert_edit_into_file', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'get_errors', 'validate_cves', 'show_content', 'open_file']"
-        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'getwebpages', 'codebase', 'githubRepo', 'changes', 'usages', 'problems', 'fileSearch', 'textSearch']"
+        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
         Agents           = "['ema-security', 'ema-metrics-consolidator']"
         GuidelinesScope  = "full"
         IncludePipelineOverview = $true
@@ -191,9 +191,9 @@ $CustomAgents = [ordered]@{
     "ema-metrics-consolidator" = @{
         Description      = "Consolidate .metrics/ usage log -- group related entries into fewer, richer rows"
         Model            = "'Gemini 3 Flash'"
-        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'fileSearch', 'textSearch']"
-        ToolsJetBrains   = "['create_file', 'insert_edit_into_file', 'read_file', 'file_search', 'grep_search']"
-        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'readfile', 'editfiles', 'fileSearch', 'textSearch']"
+        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
         Agents           = "[]"
         GuidelinesScope  = "none"
         IncludePipelineOverview = $false
@@ -203,9 +203,9 @@ $CustomAgents = [ordered]@{
     "ema-debugger" = @{
         Description      = "Systematically debug issues -- reproduce, isolate, root-cause, fix, and verify"
         Model            = "'GPT-5.4'"
-        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
-        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'run_in_terminal', 'get_terminal_output', 'get_errors', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'validate_cves', 'run_subagent']"
-        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
+        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
         Agents           = "['ema-tester', 'ema-reviewer']"
         GuidelinesScope  = "full"
         IncludePipelineOverview = $true
@@ -218,9 +218,9 @@ $CustomAgents = [ordered]@{
     "ema-security" = @{
         Description      = "In-depth security vulnerability analysis -- dependencies, code patterns, infrastructure"
         Model            = "'GPT-5.4'"
-        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
-        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'run_in_terminal', 'get_terminal_output', 'get_errors', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'validate_cves', 'run_subagent']"
-        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
+        ToolsVSCode      = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+        ToolsJetBrains   = "['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+        ToolsVisualStudio = "['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
         Agents           = "[]"
         GuidelinesScope  = "full"
         IncludePipelineOverview = $true
@@ -636,19 +636,31 @@ function Write-GeneratedFile {
         }
 
         if ($isAuto) {
-            # Auto-generated file with real changes -- prompt for confirmation
-            Get-SyncMergeChoice $RelativePath $FullPath $Content
-            switch ($script:syncChoice) {
-                "r" {
-                    $Dir = Split-Path -Parent $FullPath
-                    if (-not (Test-Path $Dir)) { New-Item -ItemType Directory -Path $Dir -Force | Out-Null }
-                    [System.IO.File]::WriteAllText($FullPath, $normalizedNew)
-                    $GeneratedFiles.Add($RelativePath)
-                    Write-Host "  `u{2713} [updated] $RelativePath" -ForegroundColor Cyan
-                }
-                "k" {
-                    $KeptFiles.Add($RelativePath)
-                    Write-Host "  `u{2298} [kept] $RelativePath" -ForegroundColor DarkGray
+            # Auto-generated: check if differences are whitespace-only
+            $existingTrimmed = ($existing -split "`n" | ForEach-Object { $_.TrimEnd() }) -join "`n"
+            $newTrimmed = ($normalizedNew -split "`n" | ForEach-Object { $_.TrimEnd() }) -join "`n"
+            if ($existingTrimmed -eq $newTrimmed) {
+                # Only whitespace/formatting differences -- replace silently
+                $Dir = Split-Path -Parent $FullPath
+                if (-not (Test-Path $Dir)) { New-Item -ItemType Directory -Path $Dir -Force | Out-Null }
+                [System.IO.File]::WriteAllText($FullPath, $normalizedNew)
+                $GeneratedFiles.Add($RelativePath)
+                Write-Host "  `u{2713} [updated] $RelativePath" -ForegroundColor Cyan
+            } else {
+                # Real content differences -- prompt for confirmation
+                Get-SyncMergeChoice $RelativePath $FullPath $Content
+                switch ($script:syncChoice) {
+                    "r" {
+                        $Dir = Split-Path -Parent $FullPath
+                        if (-not (Test-Path $Dir)) { New-Item -ItemType Directory -Path $Dir -Force | Out-Null }
+                        [System.IO.File]::WriteAllText($FullPath, $normalizedNew)
+                        $GeneratedFiles.Add($RelativePath)
+                        Write-Host "  `u{2713} [updated] $RelativePath" -ForegroundColor Cyan
+                    }
+                    "k" {
+                        $KeptFiles.Add($RelativePath)
+                        Write-Host "  `u{2298} [kept] $RelativePath" -ForegroundColor DarkGray
+                    }
                 }
             }
         } else {
@@ -794,6 +806,7 @@ function Generate-WikiPages {
 
 $GenerateAll   = $args -contains "--all"
 $Reconfigure   = $args -contains "--reconfigure"
+$IdeOverride   = ($args | Where-Object { $_ -match '^--ide=' } | Select-Object -First 1) -replace '^--ide=', ''
 $NewProject    = $args -contains "--new-project"
 $WikiOnly      = $args -contains "--wiki-only"
 $Clean         = $args -contains "--clean"
@@ -847,8 +860,24 @@ if ($GenerateAll) {
             }
             Write-Host "  Agent IDE: $ideLabel"
         }
-        $answer = Read-Host "Use this config? [Y/n]"
-        if ($answer -eq "n" -or $answer -eq "N") { Invoke-Configure }
+        $answer = Read-Host "Use this config? [Y/n/ide]"
+        if ($answer -eq "n" -or $answer -eq "N") {
+            Invoke-Configure
+        } elseif ($answer.ToLower() -eq "ide") {
+            Write-Host ""
+            Write-Host "  Select agent IDE:"
+            Write-Host "    1) VS Code (default)"
+            Write-Host "    2) JetBrains"
+            Write-Host "    3) Visual Studio (Windows)"
+            $ideChoice = Read-Host "  Choice [1-3]"
+            $script:CopilotAgentIde = switch ($ideChoice) {
+                "2" { "jetbrains" }
+                "3" { "visualstudio" }
+                default { "vscode" }
+            }
+            Write-Host "  Agent IDE set to: $($script:CopilotAgentIde)"
+            Save-Config
+        }
     }
 } elseif ($IsInteractive) {
     Invoke-Configure
@@ -858,6 +887,21 @@ if ($GenerateAll) {
     $SelectedTools  = $ToolIds
     $SelectedLangs  = $LangIds
     $SelectedExtras = $ExtraIds
+}
+
+# --- Apply --ide override if provided ---
+if ($IdeOverride) {
+    $validIdes = @("vscode", "jetbrains", "visualstudio")
+    if ($validIdes -contains $IdeOverride) {
+        if ($script:CopilotAgentIde -ne $IdeOverride) {
+            $script:CopilotAgentIde = $IdeOverride
+            Write-Host "[sync-ai-configs] Agent IDE switched to: $IdeOverride"
+            Save-Config
+        }
+    } else {
+        Write-Host "[sync-ai-configs] WARNING: Unknown IDE '$IdeOverride'. Valid values: vscode, jetbrains, visualstudio" -ForegroundColor Yellow
+        Write-Host "[sync-ai-configs] Continuing with current IDE: $($script:CopilotAgentIde)" -ForegroundColor Yellow
+    }
 }
 
 # Filter $Languages to selected languages only
@@ -995,6 +1039,7 @@ The script reads your saved config (`.sync-ai-configs`) and regenerates all file
 |---|---|
 | *(no flags)* | Re-generate using saved config — the default |
 | `--reconfigure` | Change which tools, languages, or extras are enabled |
+| `--ide=IDE` | Switch agent IDE (vscode, jetbrains, visualstudio) and re-save config |
 | `--all` | Generate for all tools and languages (useful for CI) |
 | `--wiki-only` | Regenerate only the `docs/wiki/Reference/` pages |
 | `--clean` | Remove all generated files (dry run for a fresh setup) |
@@ -1516,9 +1561,7 @@ if (Has-Tool "copilot" -and Has-Extra "prompts" -and Has-Extra "agents") {
 # AUTO-GENERATED by sync-ai-configs. Do not edit directly.
 agent: agent
 description: "Generate a SAFe-structured backlog from a high-level idea, or refine an existing backlog JSON file."
-tools:
-  - edit/editFiles
-  - azure-devops/*
+tools: ['edit/editFiles', 'azure-devops/*']
 ---
 $GeneratedHeader
 
@@ -1568,8 +1611,7 @@ if (Has-Tool "copilot" -and Has-Extra "prompts") {
 # AUTO-GENERATED by sync-ai-configs. Do not edit directly.
 agent: agent
 description: "Push a staged backlog JSON file to Azure DevOps. Creates all SAFe work items with correct hierarchy and parent-child links."
-tools:
-  - azure-devops/*
+tools: ['azure-devops/*']
 ---
 $GeneratedHeader
 
@@ -1614,8 +1656,7 @@ if (Has-Tool "copilot" -and Has-Extra "prompts") {
 # AUTO-GENERATED by sync-ai-configs. Do not edit directly.
 agent: agent
 description: "Review an existing Azure DevOps work item -- fetches the item, its children, and siblings, then proposes SAFe-aligned improvements."
-tools:
-  - azure-devops/*
+tools: ['azure-devops/*']
 ---
 $GeneratedHeader
 

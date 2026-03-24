@@ -79,6 +79,11 @@ async function testShellBrandingAndNoUpload() {
   const html = await response.text();
   assert.match(html, /<title>SAGE<\/title>/, "browser title should contain SAGE");
   assert.match(html, /<h1 id="pageTitle">SAGE<\/h1>/, "page heading should show SAGE");
+  assert.match(
+    html,
+    /<p id="timeslotAnnouncements" class="visually-hidden" aria-live="polite" aria-atomic="true"><\/p>/,
+    "the shell should include a dedicated timeslot announcement live region",
+  );
   assert.doesNotMatch(html, /type="file"/i, "the interface must not expose any file upload control");
   assert.doesNotMatch(html, /importInput/, "legacy import input should be removed from the HTML shell");
 }

@@ -16,4 +16,4 @@ Review the following code against the EMA coding standards. Check for:
 
 Highlight any violations and suggest specific fixes.
 
-${selection}
+\${selection}

@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 
 import { loadAllSources } from "../js/loader.js";
 import { filterEvents } from "../js/filter.js";
-import { renderLegend } from "../js/renderer.js";
+import { renderTimeslotGroups } from "../js/renderer.js";
 
 const baseUrl = process.env.SAGE_TEST_BASE_URL ?? "http://127.0.0.1:8000/";
 const nativeFetch = globalThis.fetch;
 
 if (typeof nativeFetch !== "function") {
-  throw new Error("Global fetch is required to run legend-click-search-spec.mjs");
+  throw new Error("Global fetch is required to run timeslot-grouping-review-followups-spec.mjs");
 }
 
 globalThis.fetch = (resource, init) => {
@@ -68,10 +68,6 @@ function matchesSelector(element, selector) {
 
   const classNames = String(element.className ?? "").split(/\s+/).filter(Boolean);
   const hasClass = (className) => classNames.includes(className);
-
-  if (selector === ".time-indicator") {
-    return hasClass("time-indicator");
-  }
 
   if (selector === ".room-card") {
     return hasClass("room-card");
@@ -254,18 +250,6 @@ class FakeElement {
     return null;
   }
 
-  remove() {
-    if (!this.parentNode) {
-      return;
-    }
-
-    const index = this.parentNode.children.indexOf(this);
-    if (index >= 0) {
-      this.parentNode.children.splice(index, 1);
-    }
-    this.parentNode = null;
-  }
-
   focus() {
     this.focused = true;
   }
@@ -275,8 +259,16 @@ class FakeElement {
   }
 }
 
-function installMinimalDom() {
+function installRendererDom() {
   const previousDocument = globalThis.document;
+  const previousWindow = globalThis.window;
+
+  globalThis.window = {
+    setInterval() {
+      return 1;
+    },
+    clearInterval() {},
+  };
 
   globalThis.document = {
     createElement(tagName) {
@@ -285,10 +277,14 @@ function installMinimalDom() {
     createTextNode(text) {
       return { nodeType: "text", textContent: text, parentNode: null };
     },
+    createDocumentFragment() {
+      return new FakeFragment();
+    },
   };
 
   return () => {
     globalThis.document = previousDocument;
+    globalThis.window = previousWindow;
   };
 }
 
@@ -306,6 +302,7 @@ function installAppDom() {
     statusMessage: new FakeElement("p"),
     timeslotAnnouncements: new FakeElement("p"),
     legend: new FakeElement("div"),
+    clearFiltersButton: new FakeElement("button"),
     "rooms-container": new FakeElement("section"),
   };
 
@@ -393,42 +390,119 @@ async function waitFor(predicate, timeoutMs) {
   throw new Error(`Timed out after ${timeoutMs}ms waiting for condition`);
 }
 
-function findLegendItem(container, valueStream) {
-  return container.children.find((child) => child?.dataset?.vs === valueStream) ?? null;
+function createEvent(overrides = {}) {
+  return {
+    date: "2026-03-24",
+    start: "09:00",
+    end: "09:30",
+    name: "Session",
+    teams: [],
+    vs: "ALL",
+    topics: "Topic",
+    location: "Room 1",
+    type: "Breakout",
+    ...overrides,
+  };
 }
 
-await runTest("legend renderer exposes one item per value stream for delegated clicks", async () => {
-  const restoreDom = installMinimalDom();
+function getBucketKeyFromTime(timeString, bucketMinutes = 30) {
+  const [hours, minutes] = String(timeString).split(":").map(Number);
+  const totalMinutes = (hours * 60) + minutes;
+  const bucketStart = Math.floor(totalMinutes / bucketMinutes) * bucketMinutes;
+  const bucketHours = String(Math.floor(bucketStart / 60)).padStart(2, "0");
+  const bucketMins = String(bucketStart % 60).padStart(2, "0");
+  return `${bucketHours}:${bucketMins}`;
+}
+
+function formatBucketLabel(bucketKey, bucketMinutes = 30) {
+  const [hours, minutes] = bucketKey.split(":").map(Number);
+  const totalMinutes = (hours * 60) + minutes;
+  const endMinutes = (totalMinutes + bucketMinutes) % (24 * 60);
+  const endHours = String(Math.floor(endMinutes / 60)).padStart(2, "0");
+  const endMins = String(endMinutes % 60).padStart(2, "0");
+  return `${bucketKey} – ${endHours}:${endMins}`;
+}
+
+function formatLocalDate(date) {
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function buildExpectedAnnouncement(events, selectedDate, now = new Date()) {
+  if (events.length === 0) {
+    return "No visible timeslots.";
+  }
+
+  const bucketOrder = [];
+  const bucketCounts = new Map();
+
+  events.forEach((event) => {
+    const bucketKey = getBucketKeyFromTime(event.start);
+    if (!bucketCounts.has(bucketKey)) {
+      bucketOrder.push(bucketKey);
+      bucketCounts.set(bucketKey, 0);
+    }
+    bucketCounts.set(bucketKey, bucketCounts.get(bucketKey) + 1);
+  });
+
+  let bucketIndex = 0;
+  if (selectedDate === formatLocalDate(now)) {
+    const currentBucketKey = getBucketKeyFromTime(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+    const upcomingIndex = bucketOrder.findIndex((bucketKey) => bucketKey >= currentBucketKey);
+    bucketIndex = upcomingIndex >= 0 ? upcomingIndex : 0;
+  }
+
+  const bucketKey = bucketOrder[bucketIndex];
+  const itemCount = bucketCounts.get(bucketKey);
+  return `Showing events from ${formatBucketLabel(bucketKey)}, ${itemCount} ${itemCount === 1 ? "item" : "items"}`;
+}
+
+await runTest("renderTimeslotGroups exposes accessible headings and toggle control relationships", async () => {
+  const restoreDom = installRendererDom();
 
   try {
-    const container = new FakeElement("div");
+    const container = new FakeElement("section");
+    container.className = "rooms";
     const colorMap = {
-      ALL: { bg: "#ccc", border: "#111" },
-      MON: { bg: "#fed", border: "#321" },
+      ALL: { bg: "#fff", border: "#000" },
       _default: { bg: "#fff", border: "#999" },
     };
+    const buckets = [
+      {
+        bucketKey: "09:00",
+        bucketLabel: "09:00 – 09:30",
+        events: [createEvent({ start: "09:00", name: "A" }), createEvent({ start: "09:15", name: "B" })],
+      },
+    ];
 
-    renderLegend(container, colorMap, [
-      { name: "Overall PI Plenary", vs: "ALL" },
-      { name: "Coffee break", vs: "ALL" },
-      { name: "VS MON Plenary", vs: "MON" },
-      { name: "Misconfigured", vs: "" },
-    ]);
+    const groups = renderTimeslotGroups(container, buckets, colorMap, {
+      expandedCount: 4,
+      currentBucketIndex: 0,
+    });
 
-    assert.deepEqual(
-      container.children.map((item) => item.children[1]?.textContent),
-      ["ALL", "MON"],
-    );
-    assert.deepEqual(
-      container.children.map((item) => item.dataset.vs),
-      ["ALL", "MON"],
-    );
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0].tagName, "DIV", "timeslot groups should be non-landmark wrappers rather than unnamed sections");
+
+    const header = groups[0].querySelector(".timeslot-header");
+    const toggle = groups[0].querySelector(".timeslot-toggle");
+    const cards = groups[0].querySelector(".timeslot-cards");
+
+    assert.equal(header?.getAttribute("role"), "heading");
+    assert.equal(header?.getAttribute("aria-level"), "3");
+    assert.equal(header?.tabIndex, -1);
+    assert.equal(toggle?.type, "button");
+    assert.equal(toggle?.getAttribute("aria-expanded"), "true");
+    assert.equal(toggle?.getAttribute("aria-controls"), cards?.id);
+    assert.equal(toggle?.getAttribute("aria-label"), "Collapse 09:00 – 09:30");
+    assert.equal(cards?.hidden, false);
   } finally {
     restoreDom();
   }
 });
 
-await runTest("clicking a legend child updates search input, URL, and filtered cards for the selected value stream", async () => {
+await runTest("app updates the dedicated timeslot live region when filters change the visible groups", async () => {
   const dom = installAppDom();
 
   try {
@@ -436,67 +510,48 @@ await runTest("clicking a legend child updates search input, URL, and filtered c
     const loaded = await loadAllSources(sources);
     assert.equal(loaded.errors.length, 0, "Committed sources should load without warnings for this interaction test");
 
-    const selectedDate = sources.sources[0].defaultDate;
-    const targetValueStream = "MON";
-    const expectedFiltered = filterEvents(loaded.events, {
+    await import(new URL(`../app.js?timeslot-review-followups=${Date.now()}`, import.meta.url));
+    await dom.dispatchDOMContentLoaded();
+
+    const currentUrl = new URL(dom.getLastUrl(), "http://127.0.0.1:8000");
+    const selectedDate = currentUrl.searchParams.get("date");
+    assert.notEqual(selectedDate, null, "Expected the app to persist a selected date in URL state");
+
+    const initialEvents = filterEvents(loaded.events, {
       date: selectedDate,
       mode: "all",
       value: "",
-      search: targetValueStream,
+      search: "",
     });
+    const initialAnnouncement = buildExpectedAnnouncement(initialEvents, selectedDate);
+    assert.equal(dom.elements.timeslotAnnouncements.textContent, initialAnnouncement);
 
-    await import(new URL(`../app.js?legend-click-search=${Date.now()}`, import.meta.url));
-    await dom.dispatchDOMContentLoaded();
+    const searchableToken = [...new Set(initialEvents.map((event) => event.vs).filter((value) => value && value !== "ALL"))]
+      .find((token) => {
+        const filteredEvents = filterEvents(loaded.events, {
+          date: selectedDate,
+          mode: "all",
+          value: "",
+          search: token,
+        });
+        return filteredEvents.length > 0 && buildExpectedAnnouncement(filteredEvents, selectedDate) !== initialAnnouncement;
+      });
 
-    const initialUrl = new URL(dom.getLastUrl(), "http://127.0.0.1:8000");
-    assert.equal(initialUrl.searchParams.get("search"), null);
-    assert.equal(dom.elements["rooms-container"].querySelectorAll(".timeslot-group").length > 0, true);
+    assert.notEqual(searchableToken, undefined, "Expected at least one non-ALL value stream to produce a different live-region summary");
 
-    const targetItem = findLegendItem(dom.elements.legend, targetValueStream);
-    assert.notEqual(targetItem, null, `Expected the rendered legend to include ${targetValueStream}`);
+    dom.elements.searchInput.value = searchableToken;
+    dom.elements.searchInput.listeners.get("input")();
 
-    const label = targetItem.children[1];
-    dom.elements.legend.listeners.get("click")({ target: label });
+    const filteredEvents = filterEvents(loaded.events, {
+      date: selectedDate,
+      mode: "all",
+      value: "",
+      search: searchableToken,
+    });
+    const filteredAnnouncement = buildExpectedAnnouncement(filteredEvents, selectedDate);
 
-    const updatedUrl = new URL(dom.getLastUrl(), "http://127.0.0.1:8000");
-    assert.equal(dom.elements.searchInput.value, targetValueStream);
-    assert.equal(updatedUrl.searchParams.get("search"), targetValueStream);
-    assert.equal(updatedUrl.searchParams.get("date"), selectedDate);
-    assert.equal(
-      dom.elements["rooms-container"].querySelectorAll(".room-card").length,
-      expectedFiltered.length,
-    );
-    assert.equal(dom.elements.timeslotAnnouncements.textContent.includes("Showing events from"), true);
-  } finally {
-    dom.restore();
-  }
-});
-
-await runTest("legend container gap clicks do not change the active search before a swatch click selects a value stream", async () => {
-  const dom = installAppDom();
-
-  try {
-    await import(new URL(`../app.js?legend-click-search-gap=${Date.now()}`, import.meta.url));
-    await dom.dispatchDOMContentLoaded();
-
-    const clickHandler = dom.elements.legend.listeners.get("click");
-    assert.equal(typeof clickHandler, "function", "Expected the legend container to register a click handler");
-
-    clickHandler({ target: dom.elements.legend });
-
-    let currentUrl = new URL(dom.getLastUrl(), "http://127.0.0.1:8000");
-    assert.equal(dom.elements.searchInput.value, "");
-    assert.equal(currentUrl.searchParams.get("search"), null);
-
-    const targetItem = dom.elements.legend.children.find((child) => child?.dataset?.vs && child.dataset.vs !== "ALL");
-    assert.notEqual(targetItem, null, "Expected at least one value-stream-specific legend item");
-
-    const swatch = targetItem.children[0];
-    clickHandler({ target: swatch });
-
-    currentUrl = new URL(dom.getLastUrl(), "http://127.0.0.1:8000");
-    assert.equal(dom.elements.searchInput.value, targetItem.dataset.vs);
-    assert.equal(currentUrl.searchParams.get("search"), targetItem.dataset.vs);
+    assert.equal(dom.elements.timeslotAnnouncements.textContent, filteredAnnouncement);
+    assert.notEqual(filteredAnnouncement, initialAnnouncement, "Expected the live-region summary to change after filtering");
   } finally {
     dom.restore();
   }
@@ -517,3 +572,4 @@ for (const result of results) {
 if (failCount > 0) {
   process.exitCode = 1;
 }
+

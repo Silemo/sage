@@ -6,6 +6,22 @@ function formatNow(now) {
   return now.toTimeString().slice(0, 5);
 }
 
+function getClassNames(element) {
+  return String(element.className ?? "").split(/\s+/).filter(Boolean);
+}
+
+function addClassName(element, className) {
+  const classNames = new Set(getClassNames(element));
+  classNames.add(className);
+  element.className = [...classNames].join(" ");
+}
+
+function removeClassName(element, className) {
+  element.className = getClassNames(element)
+    .filter((token) => token !== className)
+    .join(" ");
+}
+
 export function findIndicatorIndex(events, selectedDate, now = new Date()) {
   const sameDayEvents = events.filter((event) => event.date === selectedDate);
 
@@ -24,6 +40,25 @@ export function clearIndicator(container) {
   const indicator = container.querySelector(".time-indicator");
   if (indicator) {
     indicator.remove();
+  }
+}
+
+export function clearTimeslotIndicator(container) {
+  container.querySelectorAll(".timeslot-group").forEach((group) => {
+    removeClassName(group, "timeslot-now");
+  });
+}
+
+export function applyTimeslotIndicator(container, currentBucketIndex) {
+  clearTimeslotIndicator(container);
+  if (currentBucketIndex < 0) {
+    return;
+  }
+
+  const groups = container.querySelectorAll(".timeslot-group");
+  const targetGroup = groups[currentBucketIndex] ?? null;
+  if (targetGroup) {
+    addClassName(targetGroup, "timeslot-now");
   }
 }
 
@@ -50,3 +85,10 @@ export function startIndicatorUpdates(container, getEvents, getSelectedDate) {
   render();
   return window.setInterval(render, 60_000);
 }
+
+export function startTimeslotIndicatorUpdates(container, getCurrentBucketIndex) {
+  const render = () => applyTimeslotIndicator(container, getCurrentBucketIndex());
+  render();
+  return window.setInterval(render, 60_000);
+}
+

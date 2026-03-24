@@ -61,7 +61,6 @@ Do **not** provide the following to AI tools:
 | Non-Public Data             | Confidential business data, customer records, or non-public production data -- never send to AI tools                 |
 | Allowed Internal Code       | All internal source code, modules, documentation, and scripts -- may be used with AI tools regardless of license      |
 
-
 # General AI Coding Standards
 
 Language-agnostic standards that apply to all AI-assisted development at EMA.
@@ -156,7 +155,6 @@ EMA tracks AI-assisted development during the pilot program. At the end of every
 - Fill `Estimated Impact` with a percentage-based time savings estimate — e.g., "Time saved ≈ 40-50% — AI handled codebase exploration and component scaffolding in minutes; developer still reviews correctness, validates edge cases, and adjusts conventions (~1.5h AI-assisted vs ~3h fully manual)". Be honest and specific — overestimating undermines credibility. Consider: what AI genuinely accelerated (exploration, generation, systematic checking) vs what still requires human judgment (correctness validation, business context, edge cases, conventions)
 - Leave `Person`, `IDE`, and `Time Spent` as bracket placeholders for the developer to fill in
 
-
 # Security and Compliance
 
 ## Never Send to AI Tools
@@ -199,7 +197,6 @@ If credentials or sensitive data are accidentally sent to an AI tool:
 2. **Report** -- follow EMA security incident procedures
 3. **Audit** -- review logs to determine if the credential was used between exposure and rotation
 4. **Remediate** -- update secret storage and access controls to prevent recurrence
-
 
 # Testing Guidelines
 
@@ -267,7 +264,6 @@ Always test:
 - Do not chase 100% coverage -- focus on value, not vanity metrics
 - Skip trivial getters, setters, and pure boilerplate
 - Treat uncovered critical paths as bugs
-
 
 # Available Skills
 

@@ -23,6 +23,18 @@ body {
   color: var(--text-strong);
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .page-shell {
   max-width: 1200px;
   margin: 0 auto;
@@ -148,44 +160,78 @@ select:focus,
 
 .legend-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   margin-top: 16px;
   gap: 12px;
 }
 
-.legend {
+.legend-row .legend {
+  flex: 1 1 260px;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 0;
 }
 
+.clear-filters-button[hidden] {
+  display: none;
+}
+
 .clear-filters-button {
   flex-shrink: 0;
   align-self: flex-end;
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: none;
+  gap: 8px;
+  padding: 9px 16px 9px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 999px;
   background: var(--accent);
   color: #ffffff;
   font-size: 0.88rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  transition: background 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 12px 24px rgba(15, 118, 110, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
   white-space: nowrap;
 }
 
-.clear-filters-button:hover {
-  background: #0b5e58;
+.clear-filters-button__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
-.clear-filters-button:focus {
+.clear-filters-button__label {
+  line-height: 1;
+}
+
+.clear-filters-button:focus-visible {
   outline: 2px solid rgba(15, 118, 110, 0.25);
   outline-offset: 2px;
+}
+
+.clear-filters-button:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 16px rgba(15, 118, 110, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+@media (hover: hover) {
+  .clear-filters-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 28px rgba(15, 118, 110, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    filter: saturate(1.05);
+  }
 }
 
 .legend-item {
@@ -215,15 +261,121 @@ select:focus,
   gap: 15px;
 }
 
+.rooms.timeslot-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.timeslot-group {
+  display: block;
+}
+
+.timeslot-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.timeslot-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.timeslot-count {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.timeslot-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-strong);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.timeslot-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+  margin-top: 12px;
+}
+
+.timeslot-cards[hidden] {
+  display: none;
+}
+
+.timeslot-collapsed .timeslot-cards {
+  display: none;
+}
+
+.timeslot-now .timeslot-header {
+  border-left: 4px solid var(--accent);
+  background: var(--accent-soft);
+}
+
+.timeslot-toggle:focus,
+.timeslot-header:focus {
+  outline: 2px solid rgba(15, 118, 110, 0.25);
+  outline-offset: 2px;
+}
+
+.rooms.timeslot-layout .empty-state,
+.rooms.timeslot-layout .error-state {
+  width: 100%;
+}
+
 @media (min-width: 600px) {
   .rooms {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .rooms.timeslot-layout .timeslot-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 900px) {
   .rooms {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  .timeslot-group {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 0 20px;
+    align-items: start;
+  }
+
+  .timeslot-header {
+    top: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .timeslot-cards {
+    margin-top: 0;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   }
 }
 

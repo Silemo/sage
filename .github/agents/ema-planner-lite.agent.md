@@ -4,7 +4,7 @@ name: "ema-planner-lite"
 description: "Quick planning for simple changes -- bug fixes, small features, config changes"
 argument-hint: "Describe the change to plan (bug fix, small feature, config change) or provide the requirements path"
 model: 'Gemini 3 Flash'
-tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'usages', 'fileSearch', 'textSearch']
+tools: ['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']
 agents: ['ema-implementer-lite']
 handoffs:
   - label: "Implement"
@@ -173,7 +173,6 @@ Run: `dotnet test --filter OrderServiceTests`
 4. Run the full test suite
 5. Save implementation summary to `artifacts/2026-03-10-order-null-email-fix-implementation.md`
 ````
-
 
 # GitHub Copilot Custom Agents
 
@@ -408,7 +407,6 @@ JetBrains IDEs currently ignore the `model:` frontmatter in agent definitions. E
 - The cost table above does not apply as-is — all calls use the same model tier regardless of which agent you invoke.
 - **Skipping unnecessary agents matters more on JetBrains.** Since every call costs the same (whatever your IDE model is set to), each extra agent in the chain is a wasted call at full price. Invoke the target agent directly rather than routing through `@ema-starter` or other intermediaries you don't need.
 
-
 # EMA Coding Standards
 
 The following EMA guidelines apply to all work performed by this agent.
@@ -472,7 +470,6 @@ Do **not** provide the following to AI tools:
 | Personal or Sensitive Data  | Any identifiable information including names, emails, IDs, health data, ethnicity, political or religious information |
 | Non-Public Data             | Confidential business data, customer records, or non-public production data -- never send to AI tools                 |
 | Allowed Internal Code       | All internal source code, modules, documentation, and scripts -- may be used with AI tools regardless of license      |
-
 
 # General AI Coding Standards
 
@@ -568,7 +565,6 @@ EMA tracks AI-assisted development during the pilot program. At the end of every
 - Fill `Estimated Impact` with a percentage-based time savings estimate — e.g., "Time saved ≈ 40-50% — AI handled codebase exploration and component scaffolding in minutes; developer still reviews correctness, validates edge cases, and adjusts conventions (~1.5h AI-assisted vs ~3h fully manual)". Be honest and specific — overestimating undermines credibility. Consider: what AI genuinely accelerated (exploration, generation, systematic checking) vs what still requires human judgment (correctness validation, business context, edge cases, conventions)
 - Leave `Person`, `IDE`, and `Time Spent` as bracket placeholders for the developer to fill in
 
-
 # Security and Compliance
 
 ## Never Send to AI Tools
@@ -611,7 +607,6 @@ If credentials or sensitive data are accidentally sent to an AI tool:
 2. **Report** -- follow EMA security incident procedures
 3. **Audit** -- review logs to determine if the credential was used between exposure and rotation
 4. **Remediate** -- update secret storage and access controls to prevent recurrence
-
 
 # Testing Guidelines
 
@@ -679,7 +674,6 @@ Always test:
 - Do not chase 100% coverage -- focus on value, not vanity metrics
 - Skip trivial getters, setters, and pure boilerplate
 - Treat uncovered critical paths as bugs
-
 
 # Available Skills
 

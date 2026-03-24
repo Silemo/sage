@@ -45,6 +45,21 @@ function createStyle() {
   };
 }
 
+class FakeFragment {
+  constructor() {
+    this.children = [];
+    this.parentNode = null;
+  }
+
+  appendChild(node) {
+    if (node && typeof node === "object") {
+      node.parentNode = this;
+    }
+    this.children.push(node);
+    return node;
+  }
+}
+
 function matchesSelector(element, selector) {
   if (!element || element.nodeType === "text") {
     return false;
@@ -59,6 +74,30 @@ function matchesSelector(element, selector) {
 
   if (selector === ".room-card") {
     return hasClass("room-card");
+  }
+
+  if (selector === ".timeslot-group") {
+    return hasClass("timeslot-group");
+  }
+
+  if (selector === ".timeslot-header") {
+    return hasClass("timeslot-header");
+  }
+
+  if (selector === ".timeslot-toggle") {
+    return hasClass("timeslot-toggle");
+  }
+
+  if (selector === ".timeslot-now") {
+    return hasClass("timeslot-now");
+  }
+
+  if (selector === ".timeslot-cards") {
+    return hasClass("timeslot-cards");
+  }
+
+  if (selector === ".timeslot-label") {
+    return hasClass("timeslot-label");
   }
 
   if (selector === ".legend-item[data-vs]") {
@@ -86,12 +125,33 @@ class FakeElement {
     this.value = "";
     this.type = "";
     this.label = "";
+    this.id = "";
+    this.tabIndex = 0;
+    this.attributes = new Map();
+    this.focused = false;
+    this.scrolled = false;
     this.classList = {
       add: (...tokens) => {
         const values = new Set(String(this.className).split(/\s+/).filter(Boolean));
         tokens.forEach((token) => values.add(token));
         this.className = [...values].join(" ");
       },
+      remove: (...tokens) => {
+        const values = String(this.className).split(/\s+/).filter((token) => token && !tokens.includes(token));
+        this.className = values.join(" ");
+      },
+      toggle: (token, force) => {
+        const values = new Set(String(this.className).split(/\s+/).filter(Boolean));
+        const shouldAdd = force === undefined ? !values.has(token) : Boolean(force);
+        if (shouldAdd) {
+          values.add(token);
+        } else {
+          values.delete(token);
+        }
+        this.className = [...values].join(" ");
+        return shouldAdd;
+      },
+      contains: (token) => String(this.className).split(/\s+/).filter(Boolean).includes(token),
     };
   }
 
@@ -100,6 +160,12 @@ class FakeElement {
   }
 
   appendChild(node) {
+    if (node instanceof FakeFragment) {
+      node.children.forEach((child) => this.appendChild(child));
+      node.children = [];
+      return node;
+    }
+
     if (node && typeof node === "object") {
       node.parentNode = this;
     }
@@ -136,6 +202,21 @@ class FakeElement {
 
   addEventListener(type, callback) {
     this.listeners.set(type, callback);
+  }
+
+  setAttribute(name, value) {
+    const stringValue = String(value);
+    this.attributes.set(name, stringValue);
+    if (name === "id") {
+      this.id = stringValue;
+    }
+  }
+
+  getAttribute(name) {
+    if (name === "id") {
+      return this.id || null;
+    }
+    return this.attributes.get(name) ?? null;
   }
 
   querySelectorAll(selector) {
@@ -183,6 +264,14 @@ class FakeElement {
     }
     this.parentNode = null;
   }
+
+  focus() {
+    this.focused = true;
+  }
+
+  scrollIntoView() {
+    this.scrolled = true;
+  }
 }
 
 function installAppDom() {
@@ -197,6 +286,7 @@ function installAppDom() {
     searchInput: new FakeElement("input"),
     scopeSelect: new FakeElement("select"),
     statusMessage: new FakeElement("p"),
+    timeslotAnnouncements: new FakeElement("p"),
     legend: new FakeElement("div"),
     clearFiltersButton: new FakeElement("button"),
     "rooms-container": new FakeElement("section"),
@@ -242,6 +332,9 @@ function installAppDom() {
     },
     createTextNode(text) {
       return { nodeType: "text", textContent: text, parentNode: null };
+    },
+    createDocumentFragment() {
+      return new FakeFragment();
     },
     getElementById(id) {
       return elements[id] ?? null;
@@ -295,6 +388,8 @@ await runTest("clear button stays hidden on initial load with default filters", 
     await dom.dispatchDOMContentLoaded();
 
     assert.equal(dom.elements.clearFiltersButton.hidden, true);
+    assert.equal(dom.elements["rooms-container"].querySelectorAll(".timeslot-group").length > 0, true);
+    assert.equal(dom.elements.timeslotAnnouncements.textContent.startsWith("Showing events from"), true);
 
     const currentUrl = new URL(dom.getLastUrl(), "http://127.0.0.1:8000");
     assert.equal(currentUrl.searchParams.get("mode"), null);
@@ -344,6 +439,8 @@ await runTest("typing a search shows the clear button and clearing preserves the
     assert.equal(currentUrl.searchParams.get("search"), "MON");
     assert.equal(currentUrl.searchParams.get("date"), selectedDate);
     assert.equal(dom.elements["rooms-container"].querySelectorAll(".room-card").length, filteredEvents.length);
+    assert.equal(dom.elements["rooms-container"].querySelectorAll(".timeslot-group").length > 0, true);
+    assert.equal(dom.elements.timeslotAnnouncements.textContent.includes("Showing events from"), true);
 
     dom.elements.clearFiltersButton.listeners.get("click")();
 
@@ -406,6 +503,7 @@ await runTest("scope-only filtering shows the clear button and clearing restores
     assert.equal(currentUrl.searchParams.get("value"), selectedValueStream);
     assert.equal(currentUrl.searchParams.get("search"), null);
     assert.equal(dom.elements["rooms-container"].querySelectorAll(".room-card").length, filteredEvents.length);
+    assert.equal(dom.elements["rooms-container"].querySelectorAll(".timeslot-toggle").length > 0, true);
 
     dom.elements.clearFiltersButton.listeners.get("click")();
 
@@ -418,6 +516,43 @@ await runTest("scope-only filtering shows the clear button and clearing restores
     assert.equal(currentUrl.searchParams.get("search"), null);
     assert.equal(currentUrl.searchParams.get("date"), selectedDate);
     assert.equal(dom.elements["rooms-container"].querySelectorAll(".room-card").length, clearedEvents.length);
+  } finally {
+    dom.restore();
+  }
+});
+
+await runTest("whitespace-only search is treated as no filter and keeps the clear button hidden", async () => {
+  const dom = installAppDom();
+
+  try {
+    const sources = await fetchJson("config/sources.json");
+    const loaded = await loadAllSources(sources);
+    assert.equal(loaded.errors.length, 0, "Committed sources should load without warnings for this interaction test");
+
+    await import(new URL(`../app.js?clear-filter-whitespace=${Date.now()}`, import.meta.url));
+    await dom.dispatchDOMContentLoaded();
+
+    const currentUrlBefore = new URL(dom.getLastUrl(), "http://127.0.0.1:8000");
+    const selectedDate = currentUrlBefore.searchParams.get("date");
+    assert.notEqual(selectedDate, null, "Expected initial state to include a selected date");
+
+    const unfilteredEvents = filterEvents(loaded.events, {
+      date: selectedDate,
+      mode: "all",
+      value: "",
+      search: "",
+    });
+
+    dom.elements.searchInput.value = "   ";
+    dom.elements.searchInput.listeners.get("input")();
+
+    const currentUrl = new URL(dom.getLastUrl(), "http://127.0.0.1:8000");
+    assert.equal(dom.elements.searchInput.value, "");
+    assert.equal(dom.elements.clearFiltersButton.hidden, true);
+    assert.equal(currentUrl.searchParams.get("search"), null);
+    assert.equal(currentUrl.searchParams.get("mode"), null);
+    assert.equal(currentUrl.searchParams.get("date"), selectedDate);
+    assert.equal(dom.elements["rooms-container"].querySelectorAll(".room-card").length, unfilteredEvents.length);
   } finally {
     dom.restore();
   }

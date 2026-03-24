@@ -32,12 +32,20 @@
       <p id="statusMessage" class="status-message" hidden></p>
       <div class="legend-row">
         <div id="legend" class="legend" aria-label="Value stream legend"></div>
-        <button id="clearFiltersButton" type="button" class="clear-filters-button" hidden>
-          ✕ Clear filters
+        <button
+          id="clearFiltersButton"
+          type="button"
+          class="clear-filters-button"
+          aria-label="Clear filters"
+          hidden
+        >
+          <span class="clear-filters-button__icon" aria-hidden="true">✕</span>
+          <span class="clear-filters-button__label">Clear filters</span>
         </button>
       </div>
     </section>
 
+    <p id="timeslotAnnouncements" class="visually-hidden" aria-live="polite" aria-atomic="true"></p>
     <section id="rooms-container" class="rooms" aria-live="polite"></section>
   </main>
 

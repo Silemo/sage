@@ -1,8 +1,9 @@
 import { loadAllSources } from "./js/loader.js";
 import { buildHierarchy, filterEvents } from "./js/filter.js";
 import { readState, writeState } from "./js/url-state.js";
-import { renderCards, renderErrorState, renderLegend } from "./js/renderer.js";
-import { clearIndicator, insertIndicator, startIndicatorUpdates } from "./js/time-indicator.js";
+import { renderErrorState, renderLegend, renderTimeslotGroups } from "./js/renderer.js";
+import { clearTimeslotIndicator, startTimeslotIndicatorUpdates } from "./js/time-indicator.js";
+import { findCurrentBucketIndex, groupEventsByTimeslot } from "./js/timeslot.js";
 
 const appState = {
   allEvents: [],
@@ -17,7 +18,9 @@ const appState = {
     value: "",
     search: "",
   },
+  groupedBuckets: [],
   indicatorTimer: null,
+  lastAutoScrolledDate: "",
 };
 
 function getElements() {
@@ -28,6 +31,7 @@ function getElements() {
     searchInput: document.getElementById("searchInput"),
     scopeSelect: document.getElementById("scopeSelect"),
     statusMessage: document.getElementById("statusMessage"),
+    announcements: document.getElementById("timeslotAnnouncements"),
     legend: document.getElementById("legend"),
     clearFiltersButton: document.getElementById("clearFiltersButton"),
     rooms: document.getElementById("rooms-container"),
@@ -146,8 +150,12 @@ function getSelectedEvents() {
   return filterEvents(appState.allEvents, appState.filterState);
 }
 
+function normalizeFilterSearch(searchText) {
+  return String(searchText ?? "").trim();
+}
+
 function isFilterActive(filterState) {
-  return filterState.mode !== "all" || filterState.search !== "";
+  return filterState.mode !== "all" || normalizeFilterSearch(filterState.search) !== "";
 }
 
 function updateClearButton() {
@@ -171,15 +179,96 @@ function clearFilters() {
   applyCurrentFilters();
 }
 
+function updateTimeslotToggle(toggle, bucketLabel, isExpanded) {
+  toggle.textContent = isExpanded ? "▾" : "▸";
+  toggle.setAttribute("aria-expanded", String(isExpanded));
+  toggle.setAttribute("aria-label", `${isExpanded ? "Collapse" : "Expand"} ${bucketLabel}`);
+}
+
+function announceCurrentTimeslot(container, announcements, bucketIndex, buckets) {
+  if (!announcements) {
+    return;
+  }
+
+  if (buckets.length === 0) {
+    announcements.textContent = "No visible timeslots.";
+    return;
+  }
+
+  const visibleBucketIndex = bucketIndex >= 0 ? bucketIndex : 0;
+  const bucket = buckets[visibleBucketIndex];
+  if (!bucket) {
+    announcements.textContent = "No visible timeslots.";
+    return;
+  }
+
+  const renderedGroup = container.querySelectorAll(".timeslot-group")[visibleBucketIndex] ?? null;
+  if (!renderedGroup) {
+    announcements.textContent = "No visible timeslots.";
+    return;
+  }
+
+  const itemLabel = bucket.events.length === 1 ? "item" : "items";
+  announcements.textContent = `Showing events from ${bucket.bucketLabel}, ${bucket.events.length} ${itemLabel}`;
+}
+
+function autoScrollToCurrentTimeslot(container) {
+  const nowGroup = container.querySelector(".timeslot-now");
+  if (!nowGroup || typeof nowGroup.scrollIntoView !== "function") {
+    return;
+  }
+
+  nowGroup.scrollIntoView({ behavior: "smooth", block: "start" });
+  const header = nowGroup.querySelector(".timeslot-header");
+  if (header && typeof header.focus === "function") {
+    header.focus({ preventScroll: true });
+  }
+}
+
+function handleTimeslotToggleClick(clickEvent) {
+  const toggle = clickEvent.target.closest(".timeslot-toggle");
+  if (!toggle) {
+    return;
+  }
+
+  const group = toggle.closest(".timeslot-group");
+  const cards = group?.querySelector(".timeslot-cards") ?? null;
+  const label = group?.querySelector(".timeslot-label")?.textContent ?? "this timeslot";
+  if (!group || !cards) {
+    return;
+  }
+
+  const isExpanded = toggle.getAttribute("aria-expanded") === "true";
+  const nextExpanded = !isExpanded;
+  cards.hidden = !nextExpanded;
+  group.classList.toggle("timeslot-collapsed", !nextExpanded);
+  updateTimeslotToggle(toggle, label, nextExpanded);
+}
+
 function updateView() {
   const elements = getElements();
   const selectedEvents = getSelectedEvents();
-  renderCards(elements.rooms, selectedEvents, appState.colors);
+  const buckets = groupEventsByTimeslot(selectedEvents, 30);
+  const currentBucketIndex = findCurrentBucketIndex(buckets, appState.filterState.date);
+
+  appState.groupedBuckets = buckets;
+
+  renderTimeslotGroups(elements.rooms, buckets, appState.colors, {
+    expandedCount: 4,
+    currentBucketIndex,
+  });
   renderLegend(elements.legend, appState.colors, selectedEvents);
   updateClearButton();
-  insertIndicator(elements.rooms, selectedEvents, appState.filterState.date);
   writeState(appState.filterState);
   updateTitle();
+  announceCurrentTimeslot(elements.rooms, elements.announcements, currentBucketIndex, buckets);
+
+  if (appState.lastAutoScrolledDate !== appState.filterState.date) {
+    if (currentBucketIndex >= 0) {
+      autoScrollToCurrentTimeslot(elements.rooms);
+    }
+    appState.lastAutoScrolledDate = appState.filterState.date;
+  }
 }
 
 function applyCurrentFilters() {
@@ -223,9 +312,12 @@ async function initializeApp() {
     }
 
     appState.filterState.date = button.dataset.date ?? appState.filterState.date;
+    appState.lastAutoScrolledDate = "";
     buildDateTabs(appState.hierarchy.dates, appState.filterState.date);
     applyCurrentFilters();
   });
+
+  rooms.addEventListener("click", handleTimeslotToggleClick);
 
   legend.addEventListener("click", (clickEvent) => {
     const item = clickEvent.target.closest(".legend-item[data-vs]");
@@ -239,7 +331,10 @@ async function initializeApp() {
   });
 
   searchInput.addEventListener("input", () => {
-    appState.filterState.search = searchInput.value;
+    appState.filterState.search = searchInput.value.trim();
+    if (searchInput.value !== appState.filterState.search) {
+      searchInput.value = appState.filterState.search;
+    }
     applyCurrentFilters();
   });
 
@@ -252,9 +347,12 @@ async function initializeApp() {
 
   if (appState.indicatorTimer !== null) {
     window.clearInterval(appState.indicatorTimer);
-    clearIndicator(rooms);
+    clearTimeslotIndicator(rooms);
   }
-  appState.indicatorTimer = startIndicatorUpdates(rooms, getSelectedEvents, () => appState.filterState.date);
+  appState.indicatorTimer = startTimeslotIndicatorUpdates(
+    rooms,
+    () => findCurrentBucketIndex(appState.groupedBuckets, appState.filterState.date),
+  );
 
   if (errors.length > 0) {
     setStatusMessage(`Loaded schedule with ${errors.length} source warnings.`, "warning");

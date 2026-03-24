@@ -4,7 +4,7 @@ name: "ema-brainstormer"
 description: "Explore codebase, brainstorm with the user, then produce structured requirements"
 argument-hint: "Describe your idea or the problem you want to solve"
 model: 'GPT-5 mini'
-tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'fileSearch', 'textSearch']
+tools: ['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']
 agents: ['ema-architect', 'ema-planner-lite']
 handoffs:
   - label: "Architect"
@@ -297,9 +297,6 @@ Custom `INotificationChannel` abstraction rather than MediatR notifications. Cho
 - Produce an architecture design saved to `artifacts/2026-03-10-deployment-notifications-architecture.md`
 ````
 
-
-
-
 # EMA Coding Standards
 
 The following EMA guidelines apply to all work performed by this agent.
@@ -364,7 +361,6 @@ Do **not** provide the following to AI tools:
 | Non-Public Data             | Confidential business data, customer records, or non-public production data -- never send to AI tools                 |
 | Allowed Internal Code       | All internal source code, modules, documentation, and scripts -- may be used with AI tools regardless of license      |
 
-
 # Security and Compliance
 
 ## Never Send to AI Tools
@@ -407,7 +403,6 @@ If credentials or sensitive data are accidentally sent to an AI tool:
 2. **Report** -- follow EMA security incident procedures
 3. **Audit** -- review logs to determine if the credential was used between exposure and rotation
 4. **Remediate** -- update secret storage and access controls to prevent recurrence
-
 
 # Available Skills
 

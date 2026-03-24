@@ -59,6 +59,97 @@ export function renderErrorState(container, message) {
   container.appendChild(state);
 }
 
+function createTimeslotToggle(bucketLabel, controlsId, isExpanded) {
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "timeslot-toggle";
+  toggle.textContent = isExpanded ? "▾" : "▸";
+  toggle.setAttribute("aria-expanded", String(isExpanded));
+  toggle.setAttribute("aria-controls", controlsId);
+  toggle.setAttribute("aria-label", `${isExpanded ? "Collapse" : "Expand"} ${bucketLabel}`);
+  return toggle;
+}
+
+function createTimeslotHeader(bucket, cardsId, isExpanded) {
+  const header = document.createElement("div");
+  header.className = "timeslot-header";
+  header.setAttribute("role", "heading");
+  header.setAttribute("aria-level", "3");
+  header.tabIndex = -1;
+
+  const label = document.createElement("span");
+  label.className = "timeslot-label";
+  label.textContent = bucket.bucketLabel;
+
+  const count = document.createElement("span");
+  count.className = "timeslot-count";
+  count.textContent = `${bucket.events.length} event${bucket.events.length === 1 ? "" : "s"}`;
+
+  const toggle = createTimeslotToggle(bucket.bucketLabel, cardsId, isExpanded);
+  header.append(label, count, toggle);
+  return header;
+}
+
+function isInitiallyExpanded(index, currentBucketIndex, expandedCount) {
+  if (currentBucketIndex >= 0) {
+    return index >= currentBucketIndex && index < currentBucketIndex + expandedCount;
+  }
+
+  return index < expandedCount;
+}
+
+function createTimeslotGroup(bucket, colorMap, options) {
+  const { index, currentBucketIndex, expandedCount } = options;
+  const isCurrent = index === currentBucketIndex;
+  const isExpanded = isInitiallyExpanded(index, currentBucketIndex, expandedCount);
+  const cardsId = `timeslot-cards-${bucket.bucketKey.replace(/[^a-z0-9]+/gi, "-")}-${index}`;
+
+  const group = document.createElement("div");
+  group.className = "timeslot-group";
+  group.dataset.bucket = bucket.bucketKey;
+  if (isCurrent) {
+    group.classList.add("timeslot-now");
+  }
+  if (!isExpanded) {
+    group.classList.add("timeslot-collapsed");
+  }
+
+  const header = createTimeslotHeader(bucket, cardsId, isExpanded);
+
+  const cards = document.createElement("div");
+  cards.className = "timeslot-cards";
+  cards.id = cardsId;
+  cards.hidden = !isExpanded;
+
+  bucket.events.forEach((event) => {
+    cards.appendChild(createRoomCard(event, colorMap));
+  });
+
+  group.append(header, cards);
+  return group;
+}
+
+export function renderTimeslotGroups(container, buckets, colorMap, options = {}) {
+  clearContainer(container);
+  container.classList.add("timeslot-layout");
+
+  if (buckets.length === 0) {
+    renderEmptyState(container, "No activities match the current filters.");
+    return [];
+  }
+
+  const fragment = document.createDocumentFragment();
+  const groups = buckets.map((bucket, index) => createTimeslotGroup(bucket, colorMap, {
+    index,
+    currentBucketIndex: options.currentBucketIndex ?? -1,
+    expandedCount: options.expandedCount ?? 4,
+  }));
+
+  groups.forEach((group) => fragment.appendChild(group));
+  container.appendChild(fragment);
+  return groups;
+}
+
 export function renderCards(container, events, colorMap) {
   clearContainer(container);
 

@@ -16,4 +16,4 @@ Generate tests for the selected code following EMA testing guidelines:
 - Don't mock what you don't own -- wrap external dependencies
 - Use meaningful test data variable names
 
-${file}
+\${file}

@@ -4,7 +4,7 @@ name: "ema-metrics-consolidator"
 description: "Consolidate .metrics/ usage log -- group related entries into fewer, richer rows"
 argument-hint: "Consolidate the .metrics/ usage log -- group related entries by category and task similarity"
 model: 'Gemini 3 Flash'
-tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'fileSearch', 'textSearch']
+tools: ['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']
 agents: []
 handoffs: []
 ---
@@ -130,6 +130,3 @@ Summary:
 - `.metrics/ai-usage-log.csv`
 - `.metrics/ai-usage-log.md`
 ```
-
-
-

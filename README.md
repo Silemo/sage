@@ -46,6 +46,22 @@ Example row:
 - Frontend renderer: [js/renderer.js](js/renderer.js#L1)
 - Look for: `package.json`, `index.html`, `src/`, `public/`, `app.py`, `Dockerfile`, or `.github/workflows` for build/deploy hints.
 
+### Timeslot grouping implementation notes
+- Default bucket size is **30 minutes**.
+- Primary files involved:
+  - `js/timeslot.js`
+  - `js/renderer.js`
+  - `js/time-indicator.js`
+  - `app.js`
+  - `styles.css`
+  - `tests/timeslot-grouping-spec.mjs`
+- High-level algorithm:
+  - filter visible events for the selected date
+  - round each event start time down to the nearest 30-minute bucket
+  - render only non-empty groups
+  - highlight the current/upcoming bucket
+  - auto-scroll to the first upcoming bucket on initial load
+
 ### Quick Start (local preview)
 Update these commands to match the project's stack if different.
 

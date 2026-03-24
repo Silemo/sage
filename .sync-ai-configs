@@ -3,4 +3,4 @@
 tools=claude,copilot
 languages=python,javascript-typescript
 copilot_extras=agents,prompts,skill
-copilot_agent_ide=vscode
+copilot_agent_ide=jetbrains

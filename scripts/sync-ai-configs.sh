@@ -18,14 +18,19 @@ set -euo pipefail
 # Flags:
 #   --all           Generate configs for all tools/languages (skip prompts)
 #   --reconfigure   Re-run the tool/language selection menu
+#   --ide=IDE       Switch agent IDE (vscode, jetbrains, visualstudio) and re-save config
 #   --new-project   Detach from template origin after generation
 #   --wiki-only     Generate only docs/wiki/Reference/ pages (no tool configs)
 #   --clean         Delete all auto-generated outputs (with confirmation)
 #   --yes / -y      Skip confirmation prompt (use with --clean)
 #
-# No external dependencies -- only bash builtins + mkdir, cat, sed.
+# No external dependencies -- only bash builtins + mkdir, cat, sed, tr.
 # Idempotent -- safe to run repeatedly.
+# Compatible with macOS's stock Bash 3.2 (no mapfile, no ${var,,}).
 ###############################################################################
+
+# Bash 3.2 compatible lowercase conversion (${var,,} requires Bash 4.0+)
+_to_lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
 
 # Resolve project root (one level up from scripts/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -78,7 +83,7 @@ _select_from_menu() {
   done
   read -r input
   local selected=()
-  if [[ "${input,,}" == "all" ]]; then
+  if [[ "$(_to_lower "$input")" == "all" ]]; then
     selected=("${_MENU_IDS[@]}")
   elif [[ -n "$input" ]]; then
     IFS=',' read -ra parts <<< "$input"
@@ -128,7 +133,9 @@ load_config() {
       item="${item//[[:space:]]/}"
       [[ -n "$item" ]] && result+=("$item")
     done
-    printf '%s\n' "${result[@]}"
+    # Guard: printf '%s\n' with no args outputs a blank line under Bash 3.2
+    [[ ${#result[@]} -gt 0 ]] && printf '%s\n' "${result[@]}"
+    return 0
   }
   _migrate_extra_ids() {
     # Map old extra IDs to current ones
@@ -140,7 +147,8 @@ load_config() {
         *)                   migrated+=("$id") ;;
       esac
     done
-    printf '%s\n' "${migrated[@]}"
+    [[ ${#migrated[@]} -gt 0 ]] && printf '%s\n' "${migrated[@]}"
+    return 0
   }
   while IFS='=' read -r key val; do
     [[ "$key" =~ ^[[:space:]]*# ]] && continue
@@ -149,14 +157,21 @@ load_config() {
     val="${val## }"; val="${val%% }"
     case "$key" in
       tools)
-        if [[ -n "$val" ]]; then mapfile -t SELECTED_TOOLS  < <(_parse_csv_or_space "$val"); fi ;;
+        if [[ -n "$val" ]]; then
+          SELECTED_TOOLS=()
+          while IFS= read -r _item; do SELECTED_TOOLS+=("$_item"); done < <(_parse_csv_or_space "$val")
+        fi ;;
       languages)
-        if [[ -n "$val" ]]; then mapfile -t SELECTED_LANGS  < <(_parse_csv_or_space "$val"); fi ;;
+        if [[ -n "$val" ]]; then
+          SELECTED_LANGS=()
+          while IFS= read -r _item; do SELECTED_LANGS+=("$_item"); done < <(_parse_csv_or_space "$val")
+        fi ;;
       copilot_extras)
         if [[ -n "$val" ]]; then
-          local -a _raw_extras
-          mapfile -t _raw_extras < <(_parse_csv_or_space "$val")
-          mapfile -t SELECTED_EXTRAS < <(_migrate_extra_ids "${_raw_extras[@]}")
+          local -a _raw_extras=()
+          while IFS= read -r _item; do _raw_extras+=("$_item"); done < <(_parse_csv_or_space "$val")
+          SELECTED_EXTRAS=()
+          while IFS= read -r _item; do SELECTED_EXTRAS+=("$_item"); done < <(_migrate_extra_ids "${_raw_extras[@]+"${_raw_extras[@]}"}")
         fi ;;
       copilot_agent_ide)
         COPILOT_AGENT_IDE="${val:-vscode}" ;;
@@ -206,7 +221,7 @@ configure() {
 
   echo ""
   read -rp "  Is this a new project (cloned from the template)? [y/N] " _new_proj_answer
-  if [[ "${_new_proj_answer,,}" == "y" ]]; then
+  if [[ "$(_to_lower "$_new_proj_answer")" == "y" ]]; then
     NEW_PROJECT=true
   else
     NEW_PROJECT=false
@@ -333,20 +348,34 @@ write_file() {
     rm -f "$tmpfile"
 
     if $is_auto; then
-      # Auto-generated file with real changes -- prompt for confirmation
-      sync_interactive_choice "$relpath" "$filepath" "$content"
-      case "$SYNC_CHOICE" in
-        r)
-          ensure_dir "$(dirname "$filepath")"
-          printf '%s\n' "$content" > "$filepath"
-          GENERATED_FILES+=("$relpath")
-          echo "  [updated] $relpath"
-          ;;
-        k)
-          KEPT_FILES+=("$relpath")
-          echo "  [kept] $relpath"
-          ;;
-      esac
+      # Auto-generated: check if differences are whitespace-only
+      local _wstmp
+      _wstmp="$(mktemp)"
+      printf '%s\n' "$content" > "$_wstmp"
+      if diff -q <(sed 's/[[:space:]]*$//' "$filepath") <(sed 's/[[:space:]]*$//' "$_wstmp") >/dev/null 2>&1; then
+        # Only whitespace/formatting differences -- replace silently
+        rm -f "$_wstmp"
+        ensure_dir "$(dirname "$filepath")"
+        printf '%s\n' "$content" > "$filepath"
+        GENERATED_FILES+=("$relpath")
+        echo "  [updated] $relpath"
+      else
+        # Real content differences -- prompt for confirmation
+        rm -f "$_wstmp"
+        sync_interactive_choice "$relpath" "$filepath" "$content"
+        case "$SYNC_CHOICE" in
+          r)
+            ensure_dir "$(dirname "$filepath")"
+            printf '%s\n' "$content" > "$filepath"
+            GENERATED_FILES+=("$relpath")
+            echo "  [updated] $relpath"
+            ;;
+          k)
+            KEPT_FILES+=("$relpath")
+            echo "  [kept] $relpath"
+            ;;
+        esac
+      fi
     else
       # Not auto-generated -- prompt for confirmation
       sync_interactive_choice "$relpath" "$filepath" "$content"
@@ -539,6 +568,7 @@ The script reads your saved config (\`.sync-ai-configs\`) and regenerates all fi
 |---|---|
 | *(no flags)* | Re-generate using saved config -- the default |
 | \`--reconfigure\` | Change which tools, languages, or extras are enabled |
+| \`--ide=IDE\` | Switch agent IDE (vscode, jetbrains, visualstudio) and re-save config |
 | \`--all\` | Generate for all tools and languages (useful for CI) |
 | \`--wiki-only\` | Regenerate only the \`docs/wiki/Reference/\` pages |
 | \`--clean\` | Remove all generated files (dry run for a fresh setup) |
@@ -581,7 +611,8 @@ generate_claude_md() {
   done
   if [[ ${#lang_slugs[@]} -gt 0 ]]; then
     local -a sorted
-    mapfile -t sorted < <(sort <<<"${lang_slugs[*]}")
+    sorted=()
+    while IFS= read -r _item; do sorted+=("$_item"); done < <(sort <<<"${lang_slugs[*]}")
     for slug in "${sorted[@]}"; do
       if source_exists "${slug}.md"; then
         local lc
@@ -742,10 +773,11 @@ generate_junie_guidelines() {
 
   local all_lang_content=""
   if [[ ${#lang_slugs[@]} -gt 0 ]]; then
-  # Sort alphabetically
-  IFS=$'\n' sorted=($(sort <<<"${lang_slugs[*]}")); unset IFS
+    # Sort alphabetically
+    local -a sorted=()
+    while IFS= read -r _item; do sorted+=("$_item"); done < <(sort <<<"${lang_slugs[*]}")
 
-  for slug in "${sorted[@]}"; do
+    for slug in "${sorted[@]}"; do
     if source_exists "${slug}.md"; then
       local lc
       lc="$(read_lang_content "$slug")"
@@ -804,12 +836,17 @@ generate_custom_agents() {
   local model_impl model_impl_lite model_tester model_reviewer model_debugger model_consolidator
   tools_none="[]"
   if [[ "$COPILOT_AGENT_IDE" == "jetbrains" ]]; then
-    tools_brainstormer="['create_file', 'insert_edit_into_file', 'read_file', 'file_search', 'grep_search']"
-    tools_read="['create_file', 'insert_edit_into_file', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'show_content', 'open_file']"
-    tools_write="['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'run_in_terminal', 'get_terminal_output', 'get_errors', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'run_subagent']"
-    tools_tester="['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'run_in_terminal', 'get_terminal_output', 'get_errors', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'run_subagent']"
-    tools_reviewer="['create_file', 'insert_edit_into_file', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'get_errors', 'validate_cves', 'show_content', 'open_file']"
-    tools_debugger="['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'run_in_terminal', 'get_terminal_output', 'get_errors', 'read_file', 'list_dir', 'file_search', 'grep_search', 'semantic_search', 'validate_cves', 'run_subagent']"
+    # All JetBrains agents get the full built-in tool set
+    local _jb_all="['insert_edit_into_file', 'replace_string_in_file', 'create_file', 'apply_patch', 'get_terminal_output', 'show_content', 'open_file', 'run_in_terminal', 'get_errors', 'list_dir', 'read_file', 'file_search', 'grep_search', 'validate_cves', 'run_subagent']"
+    tools_brainstormer="$_jb_all"
+    tools_read="$_jb_all"
+    tools_write="$_jb_all"
+    tools_tester="$_jb_all"
+    tools_reviewer="$_jb_all"
+    tools_debugger="$_jb_all"
+    tools_security="$_jb_all"
+    tools_consolidator="$_jb_all"
+    tools_backlog_manager="$_jb_all"
     model_dispatcher="model: 'GPT-5 mini'"
     model_brainstormer="model: 'GPT-5 mini'"
     model_architect="model: 'Claude Opus 4.6'"
@@ -820,21 +857,21 @@ generate_custom_agents() {
     model_tester="model: 'GPT-5.4'"
     model_reviewer="model: 'Claude Sonnet 4.6'"
     model_debugger="model: 'GPT-5.4'"
-    tools_security="$tools_debugger"
     model_security="model: 'GPT-5.4'"
-    tools_consolidator="$tools_brainstormer"
     model_consolidator="model: 'Gemini 3 Flash'"
-    tools_backlog_manager="['create_file', 'insert_edit_into_file', 'read_file', 'file_search']"
     model_backlog_manager="model: 'GPT-5.4'"
   elif [[ "$COPILOT_AGENT_IDE" == "visualstudio" ]]; then
-    # Visual Studio: union of canonical aliases + VS Code-only + VS Studio-only tools
-    # Base tools for all agents: vscode, execute, read, agent, edit, search, web, todo
-    tools_brainstormer="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'editfiles', 'readfile', 'getwebpages', 'fileSearch', 'textSearch']"
-    tools_read="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'getwebpages', 'codebase', 'githubRepo', 'usages', 'fileSearch', 'textSearch']"
-    tools_write="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
-    tools_tester="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
-    tools_reviewer="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'getwebpages', 'codebase', 'githubRepo', 'changes', 'usages', 'problems', 'fileSearch', 'textSearch']"
-    tools_debugger="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
+    # All Visual Studio agents get the full tool set (canonical + VS-specific)
+    local _vs_all="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'code_search', 'readfile', 'editfiles', 'find_references', 'runcommandinterminal', 'getwebpages', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+    tools_brainstormer="$_vs_all"
+    tools_read="$_vs_all"
+    tools_write="$_vs_all"
+    tools_tester="$_vs_all"
+    tools_reviewer="$_vs_all"
+    tools_debugger="$_vs_all"
+    tools_security="$_vs_all"
+    tools_consolidator="$_vs_all"
+    tools_backlog_manager="$_vs_all"
     model_dispatcher="model: 'GPT-5 mini'"
     model_brainstormer="model: 'GPT-5 mini'"
     model_architect="model: 'Claude Opus 4.6'"
@@ -845,22 +882,21 @@ generate_custom_agents() {
     model_tester="model: 'GPT-5.4'"
     model_reviewer="model: 'Claude Sonnet 4.6'"
     model_debugger="model: 'GPT-5.4'"
-    tools_security="$tools_debugger"
     model_security="model: 'GPT-5.4'"
-    tools_consolidator="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'readfile', 'editfiles', 'fileSearch', 'textSearch']"
     model_consolidator="model: 'Gemini 3 Flash'"
-    tools_backlog_manager="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'editfiles', 'readfile', 'azure-devops/*']"
     model_backlog_manager="model: 'GPT-5.4'"
   else
-    # VS Code (default) -- uses canonical Copilot tool aliases + VS Code-specific extras
-    # Base tools for all agents: vscode, execute, read, agent, edit, search, web, todo
-    # Specialized tools added per role: codebase, githubRepo, runTests, problems, changes, usages, fileSearch, textSearch, terminalLastCommand
-    tools_brainstormer="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'fileSearch', 'textSearch']"
-    tools_read="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'usages', 'fileSearch', 'textSearch']"
-    tools_write="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
-    tools_tester="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
-    tools_reviewer="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'changes', 'usages', 'problems', 'fileSearch', 'textSearch']"
-    tools_debugger="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand']"
+    # All VS Code agents get the full tool set (canonical + VS Code-specific)
+    local _vsc_all="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'codebase', 'githubRepo', 'runTests', 'problems', 'changes', 'usages', 'fileSearch', 'textSearch', 'terminalLastCommand', 'azure-devops/*']"
+    tools_brainstormer="$_vsc_all"
+    tools_read="$_vsc_all"
+    tools_write="$_vsc_all"
+    tools_tester="$_vsc_all"
+    tools_reviewer="$_vsc_all"
+    tools_debugger="$_vsc_all"
+    tools_security="$_vsc_all"
+    tools_consolidator="$_vsc_all"
+    tools_backlog_manager="$_vsc_all"
     model_dispatcher="model: 'GPT-5 mini'"
     model_brainstormer="model: 'GPT-5 mini'"
     model_architect="model: 'Claude Opus 4.6'"
@@ -871,11 +907,8 @@ generate_custom_agents() {
     model_tester="model: 'GPT-5.4'"
     model_reviewer="model: 'Claude Sonnet 4.6'"
     model_debugger="model: 'GPT-5.4'"
-    tools_security="$tools_debugger"
     model_security="model: 'GPT-5.4'"
-    tools_consolidator="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'fileSearch', 'textSearch']"
     model_consolidator="model: 'Gemini 3 Flash'"
-    tools_backlog_manager="['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'editFiles', 'azure-devops/*']"
     model_backlog_manager="model: 'GPT-5.4'"
   fi
 
@@ -1420,9 +1453,7 @@ generate_backlog_prompts() {
 # AUTO-GENERATED by sync-ai-configs. Do not edit directly.
 agent: agent
 description: "Generate a SAFe-structured backlog from a high-level idea, or refine an existing backlog JSON file."
-tools:
-  - edit/editFiles
-  - azure-devops/*
+tools: ['edit/editFiles', 'azure-devops/*']
 ---
 '"${HEADER_COMMENT}"'
 
@@ -1466,8 +1497,7 @@ You are a SAFe product management expert. You operate in two modes:
 # AUTO-GENERATED by sync-ai-configs. Do not edit directly.
 agent: agent
 description: "Push a staged backlog JSON file to Azure DevOps. Creates all SAFe work items with correct hierarchy and parent-child links."
-tools:
-  - azure-devops/*
+tools: ['azure-devops/*']
 ---
 '"${HEADER_COMMENT}"'
 
@@ -1506,8 +1536,7 @@ Print a results table with ADO ID, type, title, and direct URL for every created
 # AUTO-GENERATED by sync-ai-configs. Do not edit directly.
 agent: agent
 description: "Review an existing Azure DevOps work item -- fetches the item, its children, and siblings, then proposes SAFe-aligned improvements."
-tools:
-  - azure-devops/*
+tools: ['azure-devops/*']
 ---
 '"${HEADER_COMMENT}"'
 
@@ -1939,10 +1968,12 @@ run_clean() {
 main() {
   # --- Argument parsing ---
   local generate_all=false reconfigure=false wiki_only=false clean=false clean_yes=false
+  local ide_override=""
   for arg in "$@"; do
     case "$arg" in
       --all)         generate_all=true; SYNC_GENERATE_ALL=true ;;
       --reconfigure) reconfigure=true ;;
+      --ide=*)       ide_override="${arg#--ide=}" ;;
       --new-project) NEW_PROJECT=true ;;
       --wiki-only)   wiki_only=true ;;
       --clean)       clean=true ;;
@@ -1998,10 +2029,25 @@ main() {
         esac
         echo "  Agent IDE: $_ide_label"
       fi
-      read -rp "Use this config? [Y/n] " answer
-      if [[ "${answer,,}" == "n" ]]; then
-        configure
-      fi
+      read -rp "Use this config? [Y/n/ide] " answer
+      case "$(_to_lower "$answer")" in
+        n)
+          configure ;;
+        ide)
+          echo ""
+          echo "  Select agent IDE:"
+          echo "    1) VS Code (default)"
+          echo "    2) JetBrains"
+          echo "    3) Visual Studio (Windows)"
+          read -rp "  Choice [1-3]: " _ide_choice
+          case "$_ide_choice" in
+            2) COPILOT_AGENT_IDE="jetbrains" ;;
+            3) COPILOT_AGENT_IDE="visualstudio" ;;
+            *) COPILOT_AGENT_IDE="vscode" ;;
+          esac
+          echo "  Agent IDE set to: $COPILOT_AGENT_IDE"
+          save_config ;;
+      esac
     fi
   elif [ -t 0 ]; then
     configure
@@ -2011,6 +2057,23 @@ main() {
     SELECTED_TOOLS=("${TOOL_IDS[@]}")
     SELECTED_LANGS=("${LANG_IDS[@]}")
     SELECTED_EXTRAS=("${EXTRA_IDS[@]}")
+  fi
+
+  # --- Apply --ide override if provided ---
+  if [[ -n "$ide_override" ]]; then
+    case "$ide_override" in
+      vscode|jetbrains|visualstudio)
+        if [[ "$COPILOT_AGENT_IDE" != "$ide_override" ]]; then
+          COPILOT_AGENT_IDE="$ide_override"
+          echo "[sync-ai-configs] Agent IDE switched to: $ide_override"
+          save_config
+        fi
+        ;;
+      *)
+        echo "[sync-ai-configs] WARNING: Unknown IDE '$ide_override'. Valid values: vscode, jetbrains, visualstudio" >&2
+        echo "[sync-ai-configs] Continuing with current IDE: $COPILOT_AGENT_IDE" >&2
+        ;;
+    esac
   fi
 
   # --- Filter language list to selected languages only ---
@@ -2186,7 +2249,7 @@ main() {
       if [[ "$current_origin" == *"EMA"*"Scaffolding"* ]] || [[ "$current_origin" == *"scaffolding"* ]]; then
         echo ""
         read -rp "Origin points to the template repo. Remove it? [y/N] " remove_origin
-        if [[ "${remove_origin,,}" == "y" ]]; then
+        if [[ "$(_to_lower "$remove_origin")" == "y" ]]; then
           git -C "$PROJECT_ROOT" remote remove origin
           echo "[sync-ai-configs] Removed template origin."
           echo "  Set your project's remote with:  git remote add origin <your-repo-url>"
