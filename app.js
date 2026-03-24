@@ -183,7 +183,7 @@ async function initializeApp() {
   buildControls(appState.hierarchy, appState.filterState);
   applyCurrentFilters();
 
-  const { dateTabs, searchInput, scopeSelect, rooms } = getElements();
+  const { dateTabs, searchInput, scopeSelect, legend, rooms } = getElements();
 
   dateTabs.addEventListener("click", (clickEvent) => {
     const button = clickEvent.target.closest("button[data-date]");
@@ -193,6 +193,17 @@ async function initializeApp() {
 
     appState.filterState.date = button.dataset.date ?? appState.filterState.date;
     buildDateTabs(appState.hierarchy.dates, appState.filterState.date);
+    applyCurrentFilters();
+  });
+
+  legend.addEventListener("click", (clickEvent) => {
+    const item = clickEvent.target.closest(".legend-item[data-vs]");
+    if (!item) {
+      return;
+    }
+
+    appState.filterState.search = item.dataset.vs;
+    searchInput.value = appState.filterState.search;
     applyCurrentFilters();
   });
 

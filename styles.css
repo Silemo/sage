@@ -162,6 +162,8 @@ select:focus,
   background: var(--surface-muted);
   border: 1px solid var(--line);
   font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
 }
 
 .legend-swatch {

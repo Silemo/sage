@@ -85,6 +85,7 @@ export function renderLegend(container, colorMap, events) {
   activeStreams.sort((left, right) => left.localeCompare(right)).forEach((valueStream) => {
     const item = document.createElement("div");
     item.className = "legend-item";
+    item.dataset.vs = valueStream;
 
     const swatch = document.createElement("span");
     swatch.className = "legend-swatch";
