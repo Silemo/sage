@@ -21,7 +21,7 @@ globalThis.fetch = (resource, init) => {
   return nativeFetch(resource, init);
 };
 
-const { loadAllSources } = await import("../js/loader.js");
+const { loadAllSources, normalizeRecord } = await import("../js/loader.js");
 
 const results = [];
 
@@ -100,17 +100,27 @@ await runTest("loader accepts committed CSV data and keeps legacy JSON fallback 
 
   assert.equal(result.errors.length, 0);
   assert.ok(result.events.length > 0);
-  const csvEvents = result.events.filter((event) => event.source === "data/csv/2026-03-17.csv");
-  const jsonEvents = result.events.filter((event) => event.source === "data/json/2026-03-18.json");
+  const day1CsvEvents = result.events.filter((event) => event.source === "data/csv/2026-03-17.csv");
+  const day2CsvEvents = result.events.filter((event) => event.source === "data/csv/2026-03-18.csv");
 
-  assert.ok(csvEvents.length > 0);
-  assert.ok(jsonEvents.length > 0);
-  assert.ok(csvEvents.every((event) => typeof event.name === "string" && Array.isArray(event.teams)));
-  assert.ok(jsonEvents.every((event) => typeof event.name === "string" && Array.isArray(event.teams)));
+  assert.ok(day1CsvEvents.length > 0);
+  assert.ok(day2CsvEvents.length > 0);
+  assert.ok(day1CsvEvents.every((event) => typeof event.name === "string" && Array.isArray(event.teams)));
+  assert.ok(day2CsvEvents.every((event) => typeof event.name === "string" && Array.isArray(event.teams)));
   assert.deepEqual(
     [...new Set(result.events.map((event) => event.date))].sort(),
     ["2026-03-17", "2026-03-18"],
   );
+
+  const legacyJsonRecords = await fetchJson("data/json/2026-03-18.json");
+  const normalizedJsonResults = legacyJsonRecords
+    .map((record) => normalizeRecord(record, "data/json/2026-03-18.json", "2026-03-18"));
+
+  normalizedJsonResults.forEach((normalizedResult) => {
+    assert.equal(normalizedResult.errors.length, 0);
+    assert.equal(typeof normalizedResult.record?.name, "string");
+    assert.equal(Array.isArray(normalizedResult.record?.teams), true);
+  });
 });
 
 await runTest("loader continues loading later sources when one source is missing", async () => {
@@ -143,12 +153,13 @@ await runTest("loader skips malformed committed CSV rows without aborting the sc
     const sources = await fetchJson("config/sources.json");
     const baselineDay2Count = (await loadAllSources(sources)).events.filter((event) => event.date === "2026-03-18").length;
     const result = await loadAllSources(sources);
+    const mutatedDay1Events = result.events.filter((event) => event.date === "2026-03-17");
 
     assert.equal(result.events.length, 1 + baselineDay2Count);
     assert.equal(result.errors.length, 1);
     assert.ok(result.events.some((event) => event.name === "Overall PI Plenary" && event.teams.length === 0));
     assert.ok(result.events.some((event) => event.date === "2026-03-18"));
-    assert.ok(result.events.every((event) => event.name !== "VS PLM Plenary"));
+    assert.ok(mutatedDay1Events.every((event) => event.name !== "VS PLM Plenary"));
     assert.match(result.errors[0], /Missing location/);
   });
 });

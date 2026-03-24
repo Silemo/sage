@@ -191,12 +191,15 @@ await runTest("renderer shows meeting name and hides filter-only teams", async (
 
 await runTest("legacy JSON day still supports team filtering through fallback team normalization", async () => {
   const jsonRecords = await fetchJson("data/json/2026-03-18.json");
-  const normalized = jsonRecords
-    .map((record) => normalizeRecord(record, "data/json/2026-03-18.json", "2026-03-18"))
-    .filter((result) => {
-      assert.equal(result.errors.length, 0);
-      return result.record;
-    })
+  const normalizeResults = jsonRecords
+    .map((record) => normalizeRecord(record, "data/json/2026-03-18.json", "2026-03-18"));
+
+  normalizeResults.forEach((result) => {
+    assert.equal(result.errors.length, 0);
+  });
+
+  const normalized = normalizeResults
+    .filter((result) => result.record)
     .map((result) => result.record);
 
   const filtered = filterEvents(normalized, {
