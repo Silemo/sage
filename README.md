@@ -1,5 +1,3 @@
-GitHub Pages: https://<your-github-username>.github.io/sage
-
 # SAGE — Schedule & Agenda for Group Events
 
 > *SAGE = Schedule & Agenda for Group Events* 
