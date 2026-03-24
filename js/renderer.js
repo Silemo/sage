@@ -100,7 +100,7 @@ export function renderLegend(container, colorMap, events) {
 
     const label = document.createElement("span");
     label.className = "legend-label";
-    label.textContent = valueStream === "_plenary" ? "Global plenary" : valueStream;
+    label.textContent = valueStream === "_plenary" ? "ALL" : valueStream;
 
     item.append(swatch, label);
     container.appendChild(item);
