@@ -45,30 +45,56 @@ function formatDate(now) {
   return `${year}-${month}-${day}`;
 }
 
-export function getBucketKey(timeString, bucketMinutes = 30) {
+export function getBucketKey(timeString) {
   const totalMinutes = parseTimeToMinutes(timeString);
-  if (totalMinutes === null || bucketMinutes <= 0) {
+  if (totalMinutes === null) {
     return "??";
   }
 
-  const bucketStart = Math.floor(totalMinutes / bucketMinutes) * bucketMinutes;
-  return formatMinutes(bucketStart);
+  return formatMinutes(totalMinutes);
 }
 
-export function formatBucketLabel(bucketKey, bucketMinutes = 30) {
-  const totalMinutes = parseTimeToMinutes(bucketKey);
-  if (totalMinutes === null || bucketMinutes <= 0) {
+export function formatBucketLabel(startTime, endTime) {
+  const startMinutes = parseTimeToMinutes(startTime);
+  const endMinutes = parseTimeToMinutes(endTime);
+  if (startMinutes === null || endMinutes === null) {
     return "Unknown time";
   }
 
-  return `${formatMinutes(totalMinutes)} – ${formatMinutes(totalMinutes + bucketMinutes)}`;
+  return `${formatMinutes(startMinutes)} – ${formatMinutes(endMinutes)}`;
 }
 
-export function groupEventsByTimeslot(events, bucketMinutes = 30) {
+function getBucketRange(bucketEvents, fallbackStart = "") {
+  const fallbackStartMinutes = parseTimeToMinutes(fallbackStart);
+  let startMinutes = fallbackStartMinutes;
+  let endMinutes = fallbackStartMinutes;
+
+  bucketEvents.forEach((event) => {
+    const eventStartMinutes = parseTimeToMinutes(event.start);
+    const eventEndMinutes = parseTimeToMinutes(event.end);
+
+    if (eventStartMinutes !== null && (startMinutes === null || eventStartMinutes < startMinutes)) {
+      startMinutes = eventStartMinutes;
+    }
+
+    if (eventEndMinutes !== null && (endMinutes === null || eventEndMinutes > endMinutes)) {
+      endMinutes = eventEndMinutes;
+    }
+  });
+
+  return {
+    startMinutes,
+    endMinutes,
+    startTime: startMinutes === null ? "??" : formatMinutes(startMinutes),
+    endTime: endMinutes === null ? "??" : formatMinutes(endMinutes),
+  };
+}
+
+export function groupEventsByTimeslot(events) {
   const buckets = new Map();
 
   events.forEach((event) => {
-    const bucketKey = getBucketKey(event.start, bucketMinutes);
+    const bucketKey = getBucketKey(event.start);
     if (!buckets.has(bucketKey)) {
       buckets.set(bucketKey, []);
     }
@@ -78,11 +104,16 @@ export function groupEventsByTimeslot(events, bucketMinutes = 30) {
 
   return [...buckets.entries()]
     .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
-    .map(([bucketKey, bucketEvents]) => ({
-      bucketKey,
-      bucketLabel: formatBucketLabel(bucketKey, bucketMinutes),
-      events: sortBucketEvents(bucketEvents),
-    }));
+    .map(([bucketKey, bucketEvents]) => {
+      const sortedEvents = sortBucketEvents(bucketEvents);
+      const range = getBucketRange(sortedEvents, bucketKey);
+
+      return {
+        bucketKey,
+        bucketLabel: formatBucketLabel(range.startTime, range.endTime),
+        events: sortedEvents,
+      };
+    });
 }
 
 /**
@@ -97,8 +128,19 @@ export function findCurrentBucketIndex(buckets, selectedDate, now = new Date()) 
     return -1;
   }
 
-  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  const currentBucketKey = getBucketKey(currentTime, 30);
-  return buckets.findIndex((bucket) => bucket.bucketKey >= currentBucketKey);
+  const currentMinutes = (now.getHours() * 60) + now.getMinutes();
+
+  return buckets.findIndex((bucket) => {
+    const range = getBucketRange(bucket.events, bucket.bucketKey);
+    if (range.startMinutes === null) {
+      return false;
+    }
+
+    if (range.endMinutes !== null && currentMinutes >= range.startMinutes && currentMinutes < range.endMinutes) {
+      return true;
+    }
+
+    return currentMinutes < range.startMinutes;
+  });
 }
 

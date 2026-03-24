@@ -248,13 +248,13 @@ function handleTimeslotToggleClick(clickEvent) {
 function updateView() {
   const elements = getElements();
   const selectedEvents = getSelectedEvents();
-  const buckets = groupEventsByTimeslot(selectedEvents, 30);
+  const buckets = groupEventsByTimeslot(selectedEvents);
   const currentBucketIndex = findCurrentBucketIndex(buckets, appState.filterState.date);
 
   appState.groupedBuckets = buckets;
 
   renderTimeslotGroups(elements.rooms, buckets, appState.colors, {
-    expandedCount: 4,
+    expandedCount: Infinity,
     currentBucketIndex,
   });
   renderLegend(elements.legend, appState.colors, selectedEvents);

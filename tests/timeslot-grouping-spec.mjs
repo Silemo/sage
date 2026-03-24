@@ -256,32 +256,34 @@ function createEvent(overrides = {}) {
   };
 }
 
-await runTest("getBucketKey rounds times to 30-minute boundaries", async () => {
+await runTest("getBucketKey preserves exact normalized times", async () => {
   assert.equal(getBucketKey("09:00"), "09:00");
-  assert.equal(getBucketKey("09:15"), "09:00");
+  assert.equal(getBucketKey("09:15"), "09:15");
   assert.equal(getBucketKey("09:30"), "09:30");
-  assert.equal(getBucketKey("23:45"), "23:30");
+  assert.equal(getBucketKey("08:55"), "08:55");
 });
 
-await runTest("formatBucketLabel formats bucket ranges including midnight wrap", async () => {
-  assert.equal(formatBucketLabel("09:00"), "09:00 – 09:30");
-  assert.equal(formatBucketLabel("23:30"), "23:30 – 00:00");
+await runTest("formatBucketLabel formats exact ranges including midnight wrap", async () => {
+  assert.equal(formatBucketLabel("09:00", "09:30"), "09:00 – 09:30");
+  assert.equal(formatBucketLabel("23:30", "00:00"), "23:30 – 00:00");
 });
 
-await runTest("groupEventsByTimeslot groups mixed event times and preserves sorted order", async () => {
+await runTest("groupEventsByTimeslot groups by exact start time and preserves sorted order", async () => {
   const grouped = groupEventsByTimeslot([
+    createEvent({ start: "08:55", end: "09:45", name: "Early" }),
     createEvent({ start: "09:35", end: "10:00", name: "C" }),
     createEvent({ start: "09:05", end: "09:20", name: "B" }),
-    createEvent({ start: "09:00", end: "09:15", name: "A" }),
+    createEvent({ start: "09:05", end: "09:20", name: "A" }),
     createEvent({ start: "10:00", end: "10:30", name: "D" }),
   ]);
 
   assert.deepEqual(
     grouped.map((bucket) => bucket.bucketKey),
-    ["09:00", "09:30", "10:00"],
+    ["08:55", "09:05", "09:35", "10:00"],
   );
+  assert.equal(grouped[0].bucketLabel, "08:55 – 09:45");
   assert.deepEqual(
-    grouped[0].events.map((event) => event.name),
+    grouped[1].events.map((event) => event.name),
     ["A", "B"],
   );
   assert.equal(groupEventsByTimeslot([]).length, 0);
@@ -289,9 +291,9 @@ await runTest("groupEventsByTimeslot groups mixed event times and preserves sort
 
 await runTest("findCurrentBucketIndex returns expected bucket positions for today and non-today", async () => {
   const buckets = groupEventsByTimeslot([
-    createEvent({ start: "09:00" }),
-    createEvent({ start: "09:30" }),
-    createEvent({ start: "10:00" }),
+    createEvent({ start: "09:00", end: "09:30" }),
+    createEvent({ start: "09:30", end: "10:00" }),
+    createEvent({ start: "10:00", end: "10:30" }),
   ]);
 
   assert.equal(
@@ -309,6 +311,22 @@ await runTest("findCurrentBucketIndex returns expected bucket positions for toda
   assert.equal(
     findCurrentBucketIndex(buckets, "2026-03-24", new Date("2026-03-24T23:45:00")),
     -1,
+  );
+});
+
+await runTest("findCurrentBucketIndex keeps irregular ongoing events highlighted until their real end time", async () => {
+  const buckets = groupEventsByTimeslot([
+    createEvent({ start: "08:55", end: "09:45", name: "Early" }),
+    createEvent({ start: "10:00", end: "10:30", name: "Next" }),
+  ]);
+
+  assert.equal(
+    findCurrentBucketIndex(buckets, "2026-03-24", new Date("2026-03-24T09:44:00")),
+    0,
+  );
+  assert.equal(
+    findCurrentBucketIndex(buckets, "2026-03-24", new Date("2026-03-24T09:45:00")),
+    1,
   );
 });
 
@@ -333,15 +351,17 @@ await runTest("renderTimeslotGroups creates grouped containers, nested cards, an
       currentBucketIndex: 1,
     });
 
-    assert.equal(groups.length, 2);
+    assert.equal(groups.length, 3);
     assert.equal(container.classList.contains("timeslot-layout"), true);
-    assert.equal(container.querySelectorAll(".timeslot-group").length, 2);
+    assert.equal(container.querySelectorAll(".timeslot-group").length, 3);
     assert.equal(container.querySelectorAll(".room-card").length, 3);
     assert.equal(container.querySelectorAll(".timeslot-now").length, 1);
     assert.equal(groups[0].querySelector(".timeslot-toggle").getAttribute("aria-expanded"), "false");
     assert.equal(groups[0].querySelector(".timeslot-cards").hidden, true);
     assert.equal(groups[1].querySelector(".timeslot-toggle").getAttribute("aria-expanded"), "true");
     assert.equal(groups[1].querySelector(".timeslot-cards").hidden, false);
+    assert.equal(groups[2].querySelector(".timeslot-toggle").getAttribute("aria-expanded"), "false");
+    assert.equal(groups[2].querySelector(".timeslot-cards").hidden, true);
   } finally {
     restoreDom();
   }

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { loadAllSources } from "../js/loader.js";
 import { filterEvents } from "../js/filter.js";
 import { renderTimeslotGroups } from "../js/renderer.js";
+import { findCurrentBucketIndex, groupEventsByTimeslot } from "../js/timeslot.js";
 
 const baseUrl = process.env.SAGE_TEST_BASE_URL ?? "http://127.0.0.1:8000/";
 const nativeFetch = globalThis.fetch;
@@ -405,58 +406,64 @@ function createEvent(overrides = {}) {
   };
 }
 
-function getBucketKeyFromTime(timeString, bucketMinutes = 30) {
-  const [hours, minutes] = String(timeString).split(":").map(Number);
-  const totalMinutes = (hours * 60) + minutes;
-  const bucketStart = Math.floor(totalMinutes / bucketMinutes) * bucketMinutes;
-  const bucketHours = String(Math.floor(bucketStart / 60)).padStart(2, "0");
-  const bucketMins = String(bucketStart % 60).padStart(2, "0");
-  return `${bucketHours}:${bucketMins}`;
-}
-
-function formatBucketLabel(bucketKey, bucketMinutes = 30) {
-  const [hours, minutes] = bucketKey.split(":").map(Number);
-  const totalMinutes = (hours * 60) + minutes;
-  const endMinutes = (totalMinutes + bucketMinutes) % (24 * 60);
-  const endHours = String(Math.floor(endMinutes / 60)).padStart(2, "0");
-  const endMins = String(endMinutes % 60).padStart(2, "0");
-  return `${bucketKey} – ${endHours}:${endMins}`;
-}
-
-function formatLocalDate(date) {
-  const year = String(date.getFullYear());
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 function buildExpectedAnnouncement(events, selectedDate, now = new Date()) {
   if (events.length === 0) {
     return "No visible timeslots.";
   }
 
-  const bucketOrder = [];
-  const bucketCounts = new Map();
+  const buckets = groupEventsByTimeslot(events);
+  const bucketIndex = Math.max(findCurrentBucketIndex(buckets, selectedDate, now), 0);
+  const bucket = buckets[bucketIndex] ?? buckets[0];
 
-  events.forEach((event) => {
-    const bucketKey = getBucketKeyFromTime(event.start);
-    if (!bucketCounts.has(bucketKey)) {
-      bucketOrder.push(bucketKey);
-      bucketCounts.set(bucketKey, 0);
-    }
-    bucketCounts.set(bucketKey, bucketCounts.get(bucketKey) + 1);
-  });
-
-  let bucketIndex = 0;
-  if (selectedDate === formatLocalDate(now)) {
-    const currentBucketKey = getBucketKeyFromTime(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
-    const upcomingIndex = bucketOrder.findIndex((bucketKey) => bucketKey >= currentBucketKey);
-    bucketIndex = upcomingIndex >= 0 ? upcomingIndex : 0;
+  if (!bucket) {
+    return "No visible timeslots.";
   }
 
-  const bucketKey = bucketOrder[bucketIndex];
-  const itemCount = bucketCounts.get(bucketKey);
-  return `Showing events from ${formatBucketLabel(bucketKey)}, ${itemCount} ${itemCount === 1 ? "item" : "items"}`;
+  const itemCount = bucket.events.length;
+  return `Showing events from ${bucket.bucketLabel}, ${itemCount} ${itemCount === 1 ? "item" : "items"}`;
+}
+
+function findDateWithAtLeastBucketCount(events, minimumBuckets) {
+  const uniqueDates = [...new Set(events.map((event) => event.date).filter(Boolean))];
+
+  for (const date of uniqueDates) {
+    const dayEvents = filterEvents(events, {
+      date,
+      mode: "all",
+      value: "",
+      search: "",
+    });
+    const buckets = groupEventsByTimeslot(dayEvents);
+    if (buckets.length >= minimumBuckets) {
+      return { date, buckets };
+    }
+  }
+
+  return null;
+}
+
+function assertAllRenderedTimeslotsExpanded(container) {
+  const groups = container.querySelectorAll(".timeslot-group");
+  assert.ok(groups.length > 0, "Expected at least one rendered timeslot group");
+
+  groups.forEach((group, index) => {
+    const toggle = group.querySelector(".timeslot-toggle");
+    const cards = group.querySelector(".timeslot-cards");
+
+    assert.notEqual(toggle, null, `Expected timeslot ${index + 1} to include a toggle`);
+    assert.notEqual(cards, null, `Expected timeslot ${index + 1} to include a cards wrapper`);
+    assert.equal(toggle.getAttribute("aria-expanded"), "true", `Expected timeslot ${index + 1} to start expanded`);
+    assert.equal(cards.hidden, false, `Expected timeslot ${index + 1} cards to be visible`);
+    assert.equal(group.classList.contains("timeslot-collapsed"), false, `Expected timeslot ${index + 1} not to be marked collapsed`);
+  });
+
+  return groups;
+}
+
+function clickDateTab(dom, targetDate) {
+  const dateButton = dom.elements.dateTabs.children.find((child) => child?.dataset?.date === targetDate);
+  assert.notEqual(dateButton, undefined, `Expected a rendered date tab for ${targetDate}`);
+  dom.elements.dateTabs.listeners.get("click")({ target: dateButton });
 }
 
 await runTest("renderTimeslotGroups exposes accessible headings and toggle control relationships", async () => {
@@ -552,6 +559,69 @@ await runTest("app updates the dedicated timeslot live region when filters chang
 
     assert.equal(dom.elements.timeslotAnnouncements.textContent, filteredAnnouncement);
     assert.notEqual(filteredAnnouncement, initialAnnouncement, "Expected the live-region summary to change after filtering");
+  } finally {
+    dom.restore();
+  }
+});
+
+await runTest("app renders all visible timeslots expanded for a day with more than four buckets", async () => {
+  const dom = installAppDom();
+
+  try {
+    const sources = await fetchJson("config/sources.json");
+    const loaded = await loadAllSources(sources);
+    assert.equal(loaded.errors.length, 0, "Committed sources should load without warnings for this interaction test");
+
+    const targetDay = findDateWithAtLeastBucketCount(loaded.events, 5);
+    assert.notEqual(targetDay, null, "Expected committed schedule data to contain at least one day with five or more timeslot buckets");
+
+    await import(new URL(`../app.js?expand-all-timeslots-initial=${Date.now()}`, import.meta.url));
+    await dom.dispatchDOMContentLoaded();
+
+    const currentUrl = new URL(dom.getLastUrl(), "http://127.0.0.1:8000");
+    if (currentUrl.searchParams.get("date") !== targetDay.date) {
+      clickDateTab(dom, targetDay.date);
+    }
+
+    const groups = assertAllRenderedTimeslotsExpanded(dom.elements["rooms-container"]);
+    assert.equal(groups.length, targetDay.buckets.length, "Expected every bucket for the selected day to be rendered and expanded");
+    assert.ok(groups.length >= 5, "Expected this regression test to exercise more than four timeslots");
+  } finally {
+    dom.restore();
+  }
+});
+
+await runTest("clearing filters restores the full day with every visible timeslot expanded", async () => {
+  const dom = installAppDom();
+
+  try {
+    const sources = await fetchJson("config/sources.json");
+    const loaded = await loadAllSources(sources);
+    assert.equal(loaded.errors.length, 0, "Committed sources should load without warnings for this interaction test");
+
+    const targetDay = findDateWithAtLeastBucketCount(loaded.events, 5);
+    assert.notEqual(targetDay, null, "Expected committed schedule data to contain at least one day with five or more timeslot buckets");
+
+    const searchableToken = [...new Set(targetDay.buckets.flatMap((bucket) => bucket.events.map((event) => event.vs)).filter((value) => value && value !== "ALL"))][0];
+    assert.notEqual(searchableToken, undefined, "Expected the chosen day to contain at least one searchable non-ALL value stream");
+
+    await import(new URL(`../app.js?expand-all-timeslots-clear=${Date.now()}`, import.meta.url));
+    await dom.dispatchDOMContentLoaded();
+
+    const currentUrl = new URL(dom.getLastUrl(), "http://127.0.0.1:8000");
+    if (currentUrl.searchParams.get("date") !== targetDay.date) {
+      clickDateTab(dom, targetDay.date);
+    }
+
+    dom.elements.searchInput.value = searchableToken;
+    dom.elements.searchInput.listeners.get("input")();
+    assert.equal(dom.elements.clearFiltersButton.hidden, false, "Expected the clear button to appear after applying a search filter");
+
+    dom.elements.clearFiltersButton.listeners.get("click")();
+
+    const groups = assertAllRenderedTimeslotsExpanded(dom.elements["rooms-container"]);
+    assert.equal(groups.length, targetDay.buckets.length, "Expected clearing filters to restore every bucket for the selected day");
+    assert.equal(dom.elements.clearFiltersButton.hidden, true, "Expected the clear button to hide again after clearing filters");
   } finally {
     dom.restore();
   }
