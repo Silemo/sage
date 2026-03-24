@@ -23,6 +23,10 @@
     "bg": "#E0F7FA",
     "border": "#00695C"
   },
+  "ALL": {
+    "bg": "#ECEFF1",
+    "border": "#455A64"
+  },
   "_plenary": {
     "bg": "#ECEFF1",
     "border": "#455A64"
