@@ -19,6 +19,10 @@ export function isVsPlenary(event, valueStream) {
   return event.type === "Plenary" && event.vs === valueStream && !isGlobalPlenary(event);
 }
 
+function isAllValueStreamEvent(event) {
+  return event.vs === "ALL";
+}
+
 function hasSelectableTeams(event) {
   return event.teams.some((teamName) => isSelectableTeamName(teamName));
 }
@@ -102,15 +106,15 @@ export function filterEvents(events, filterState) {
     }
 
     if (filterState.mode === "plenary") {
-      return isGlobalPlenary(event);
+      return isAllValueStreamEvent(event);
     }
 
     if (filterState.mode === "vs") {
-      return isGlobalPlenary(event) || event.vs === filterState.value;
+      return isAllValueStreamEvent(event) || event.vs === filterState.value;
     }
 
     if (filterState.mode === "team") {
-      return isGlobalPlenary(event)
+      return isAllValueStreamEvent(event)
         || (teamValueStream !== "" && isVsPlenary(event, teamValueStream))
         || event.teams.includes(filterState.value)
         || event.teams.length === 0;

@@ -291,10 +291,11 @@ async function testLegendAndColorUseValueStreamOnly() {
   }
 }
 
-async function testRendererIgnoresTypeWhilePlenaryFilterStillUsesType() {
+async function testRendererIgnoresTypeWhileScopeFilterUsesAllValueStream() {
   const colorMap = {
     ALL: { bg: "#ccc", border: "#111" },
     PLM: { bg: "#def", border: "#123" },
+    MON: { bg: "#fed", border: "#321" },
     _default: { bg: "#fff", border: "#999" },
   };
 
@@ -321,10 +322,44 @@ async function testRendererIgnoresTypeWhilePlenaryFilterStillUsesType() {
       location: "Lobby",
       type: "Coffee",
     },
+    {
+      date: "2026-03-17",
+      start: "10:00",
+      end: "11:30",
+      name: "VS PLM Plenary",
+      teams: ["Marvels"],
+      vs: "PLM",
+      topics: "PI Objectives",
+      location: "2C",
+      type: "Plenary",
+    },
+    {
+      date: "2026-03-17",
+      start: "10:00",
+      end: "11:30",
+      name: "VS MON Plenary",
+      teams: ["Alpha"],
+      vs: "MON",
+      topics: "Planning",
+      location: "1A",
+      type: "Plenary",
+    },
+    {
+      date: "2026-03-17",
+      start: "13:00",
+      end: "14:00",
+      name: "Lunch",
+      teams: [],
+      vs: "ALL",
+      topics: "Good food and some talks",
+      location: "Restaurant",
+      type: "Lunch",
+    },
   ];
 
   assert.deepEqual(getEventColor(events[0], colorMap), colorMap.ALL);
   assert.deepEqual(getEventColor(events[1], colorMap), colorMap.ALL);
+  assert.deepEqual(getEventColor(events[4], colorMap), colorMap.ALL);
 
   const plenaryOnly = filterEvents(events, {
     date: "2026-03-17",
@@ -333,7 +368,26 @@ async function testRendererIgnoresTypeWhilePlenaryFilterStillUsesType() {
     search: "",
   });
 
-  assert.deepEqual(plenaryOnly.map((event) => event.name), ["Overall PI Plenary"]);
+  assert.deepEqual(plenaryOnly.map((event) => event.name), ["Overall PI Plenary", "Coffee break", "Lunch"]);
+
+  const plmScope = filterEvents(events, {
+    date: "2026-03-17",
+    mode: "vs",
+    value: "PLM",
+    search: "",
+  });
+
+  assert.deepEqual(plmScope.map((event) => event.name), ["Overall PI Plenary", "Coffee break", "VS PLM Plenary", "Lunch"]);
+  assert.equal(plmScope.some((event) => event.name === "VS MON Plenary"), false);
+
+  const lunchOnly = filterEvents(events, {
+    date: "2026-03-17",
+    mode: "plenary",
+    value: "",
+    search: "food",
+  });
+
+  assert.deepEqual(lunchOnly.map((event) => event.name), ["Lunch"]);
 }
 
 async function testShippedColorConfigKeepsDefaultFallbackAndDropsPlenaryAlias() {
@@ -357,7 +411,7 @@ const tests = [
   ["hierarchy_and_team_filter_follow_name_and_teams_rules", testHierarchyAndTeamFilteringFollowNewContract],
   ["event_id_and_renderer_use_meeting_name", testEventIdAndRendererUseMeetingName],
   ["legend_and_colors_follow_value_stream_contract", testLegendAndColorUseValueStreamOnly],
-  ["renderer_colors_ignore_type_but_plenary_filter_does_not", testRendererIgnoresTypeWhilePlenaryFilterStillUsesType],
+  ["renderer_colors_ignore_type_but_scope_filter_uses_all_value_stream", testRendererIgnoresTypeWhileScopeFilterUsesAllValueStream],
   ["shipped_color_config_keeps_default_fallback_and_no_plenary_alias", testShippedColorConfigKeepsDefaultFallbackAndDropsPlenaryAlias],
 ];
 

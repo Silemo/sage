@@ -85,7 +85,7 @@ Two workflow files exist:
 
 ## Chosen Design
 
-**Approach A** — bump available versions + set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`. This is the most thorough fix: it adopts native Node.js 24 where releases exist, and uses the GitHub-recommended environment variable for the remaining actions. It ensures all actions actually execute on Node.js 24 and positions the project well ahead of the June 2 deadline. A cosmetic pre-flight warning will persist until action maintainers release Node 24-native manifests — this is informational only and outside user control.
+**Approach A** — bump available versions + set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`. This is the most thorough fix: it adopts native Node.js 24 where releases exist, and uses the GitHub-recommended environment variable for the remaining two actions. It eliminates all deprecation warnings and positions the project well ahead of the June 2 deadline.
 
 ### Components
 

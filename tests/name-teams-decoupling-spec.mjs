@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { loadAllSources } from "../js/loader.js";
+import { loadAllSources, normalizeRecord } from "../js/loader.js";
 import { buildHierarchy, filterEvents, isGlobalPlenary, isVsPlenary } from "../js/filter.js";
 import { createRoomCard } from "../js/renderer.js";
 
@@ -128,6 +128,39 @@ await runTest("hierarchy groups only teams under their value streams for committ
   assert.equal(hierarchy.valueStreams.PLM.includes("Coffee break"), false);
 });
 
+await runTest("scope filters include shared ALL events for plenary and value-stream views", async () => {
+  const sources = await fetchJson("config/sources.json");
+  const result = await loadAllSources(sources);
+
+  assert.equal(result.errors.length, 0);
+
+  const plenaryFiltered = filterEvents(result.events, {
+    date: "2026-03-17",
+    mode: "plenary",
+    value: "",
+    search: "",
+  });
+
+  const plenaryNames = plenaryFiltered.map((event) => event.name);
+  assert.ok(plenaryNames.includes("Overall PI Plenary"));
+  assert.ok(plenaryNames.includes("Coffee break"));
+  assert.ok(plenaryNames.includes("Lunch"));
+
+  const monFiltered = filterEvents(result.events, {
+    date: "2026-03-17",
+    mode: "vs",
+    value: "MON",
+    search: "",
+  });
+
+  const monNames = monFiltered.map((event) => event.name);
+  assert.ok(monNames.includes("Coffee break"));
+  assert.ok(monNames.includes("Lunch"));
+  assert.ok(monNames.includes("VS MON Plenary"));
+  assert.ok(monNames.includes("Alpha"));
+  assert.equal(monNames.includes("VS PLM Plenary"), false);
+});
+
 await runTest("renderer shows meeting name and hides filter-only teams", async () => {
   const restoreDom = installMinimalDom();
 
@@ -157,12 +190,16 @@ await runTest("renderer shows meeting name and hides filter-only teams", async (
 });
 
 await runTest("legacy JSON day still supports team filtering through fallback team normalization", async () => {
-  const sources = await fetchJson("config/sources.json");
-  const result = await loadAllSources(sources);
+  const jsonRecords = await fetchJson("data/json/2026-03-18.json");
+  const normalized = jsonRecords
+    .map((record) => normalizeRecord(record, "data/json/2026-03-18.json", "2026-03-18"))
+    .filter((result) => {
+      assert.equal(result.errors.length, 0);
+      return result.record;
+    })
+    .map((result) => result.record);
 
-  assert.equal(result.errors.length, 0);
-
-  const filtered = filterEvents(result.events, {
+  const filtered = filterEvents(normalized, {
     date: "2026-03-18",
     mode: "team",
     value: "Core Team",
