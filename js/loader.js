@@ -2,7 +2,7 @@ const REQUIRED_FIELDS = ["date", "start", "end", "name", "topics", "location", "
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^\d{2}:\d{2}$/;
 const VS_ALIASES = {
-  "all": "Portfolio",
+  "all": "ALL",
   "experimentation runway": "Exp RW",
   "exp runway": "Exp RW",
   "exp rw": "Exp RW",

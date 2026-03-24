@@ -10,8 +10,7 @@ export function isGlobalPlenary(event) {
   return event.type === "Plenary" && (
     event.name === "ALL" ||
     event.name === "Every One" ||
-    event.vs === "" ||
-    event.vs === "Portfolio"
+    event.vs === ""
   );
 }
 
