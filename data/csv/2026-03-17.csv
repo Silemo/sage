@@ -2,10 +2,10 @@
 08:55 - 9:45,Auditorium N.W.,PI Objectives,Overall PI Plenary,ALL,,Plenary
 9:45 - 10:00,Lobby,Small talk,Coffee break,ALL,,Coffee
 10:00 - 11:30,2C,PI Objectives,VS PLM Plenary,PLM,"ePI MSFT Team,MSFT Team,PMS BEV Team,PMS Data Quality Team,Marvels,Transformers,Avengers,DAP BI Team,UPD Team,IRIS Core Team,IRIS System Team",Plenary
-10:00 - 11:30,0A,PI Objectives,VS R&D Plenary,R&D ,"DNA_KM,CTIS Dev Team,Data Wizards",Plenary
+10:00 - 11:30,0A,PI Objectives,VS R&D Plenary,R&D ,"DAP Knowledge Mining Team,CTIS Dev Team,Data Wizards",Plenary
 10:00 - 11:30,1A,PI Objectives,VS MON Plenary,MON,"Evengers,Product Defenders,Data Dynamos,Flu Fighters,Alpha,EudraGMDP Team",Plenary
 10:00 - 11:30,3A,PI Objectives,VS TLM Plenary,TLM,InfoSec Team,Plenary
-10:00 - 11:30,5B ,PI Objectives,VS EXP RunWay Plenary, EXP Runway,"DNA_ACE,TDT-DCX",Plenary
+10:00 - 11:30,5B ,PI Objectives,VS EXP RW Plenary, EXP RW,"DAP ACE Team,TDT-DCX",Plenary
 10:00 - 11:30,13B,PI Objectives,VS MTA Plenary,MTA,"SAP HR Replacement Team,MTA Team",Plenary
 11:30 - 16:00,15A,ePI,ePI MSFT Team,PLM,ePI MSFT Team,Breakout room
 11:30 - 16:00,2B,"eAF, Product UI, FHIR Adapter",MSFT Team,PLM,MSFT Team,Breakout room
@@ -18,34 +18,30 @@
 11:30 - 16:00,15B,UPD,UPD Team,PLM,UPD Team,Breakout room
 11:30 - 16:00,2E,IRIS,IRIS Core Team ,PLM,IRIS Core Team ,Breakout room
 11:30 - 16:00,8A,IRIS,IRIS System Team,PLM,IRIS System Team,Breakout room
-11:30 - 16:00,14A,DAP Knowledge Mining,DNA_KM,R&D,DNA_KM,Breakout room
+11:30 - 16:00,14A,DAP Knowledge Mining,DAP Knowledge Mining Team,R&D,DAP Knowledge Mining Team,Breakout room
 11:30 - 16:00,0A,CTIS,CTIS Dev Team,R&D,CTIS Dev Team,Breakout room
 11:30 - 16:00,11B,"CTIS, ASU BI ",Data Wizards,R&D,Data Wizards,Breakout room
 11:30 - 16:00,1A,"EVH, EVV Trans",Evengers,MON,Evengers,Breakout room
 11:30 - 16:00,1A,"EVH, EVV Trans",Product Defenders,MON,Product Defenders,Breakout room
 11:30 - 16:00,1A,"EVVBI, EVDAS DWH",Data Dynamos,MON,Data Dynamos,Breakout room
-11:30 - 16:00,3A,"UPhV, Inspection, PD, ESMP",Flu Fighters,MON,Flu Fighters,Breakout room
+11:30 - 16:00,3A,"UPhV, Inspection, PD, ENS",Flu Fighters,MON,Flu Fighters,Breakout room
 11:30 - 16:00,10A,ESMP,Alpha,MON,Alpha,Breakout room
 11:30 - 16:00,3B,EudraGMDP,EudraGMDP Team,MON,EudraGMDP Team,Breakout room
 11:30 - 16:00,3A,InfoSec and decommissioning of non prod tenant,InfoSec Team,TLM,InfoSec Team,Breakout room
-11:30 - 16:00,5B,DAP,DNA_ACE, EXP Runway,DNA_ACE,Breakout room
-11:30 - 16:00,5A,EXP Runway,TDT-DCX, EXP Runway,TDT-DCX,Breakout room
+11:30 - 16:00,5B,DAP,DAP ACE Team, EXP RW,DAP ACE Team,Breakout room
+11:30 - 16:00,5A,EXP Runway,TDT-DCX, EXP RW,TDT-DCX,Breakout room
 11:30 - 16:00,13B,SAP HR Replacement ,SAP HR Replacement Team,MTA,SAP HR Replacement Team,Breakout room
 11:30 - 16:00,13A,MTA,MTA Team,MTA,MTA Team,Breakout room
 13:00 - 14:00,EMA Restaurant,Good food and some talks,Lunch,ALL,,Lunch
 16:00 - 17:00,2C,Draft Plan Review,VS PLM Plenary,PLM,"ePI MSFT Team,MSFT Team,PMS BEV Team,PMS Data Quality Team,Marvels,Transformers,Avengers,DAP BI Team,UPD Team,IRIS Core Team,IRIS System Team",Plenary
-16:00 - 17:00,0A,Draft Plan Review,VS R&D Plenary,R&D,"DNA_KM,CTIS Dev Team,Data Wizards",Plenary
+16:00 - 17:00,0A,Draft Plan Review,VS R&D Plenary,R&D,"DAP Knowledge Mining Team,CTIS Dev Team,Data Wizards",Plenary
 16:00 - 17:00,1A,Draft Plan Review,VS MON Plenary,MON,"Evengers,Product Defenders,Data Dynamos,Flu Fighters,Alpha,EudraGMDP Team",Plenary
 16:00 - 17:00,3A,Draft Plan Review,VS TLM Plenary,TLM,InfoSec Team,Plenary
-16:00 - 17:00,5B,Draft Plan Review,VS EXP RunWay Plenary,EXP Runway,"DNA_ACE,TDT-DCX",Plenary
+16:00 - 17:00,5B,Draft Plan Review,VS EXP RW Plenary,EXP RW,"DAP ACE Team,TDT-DCX",Plenary
 16:00 - 17:00,13B,Draft Plan Review,VS MTA Plenary,MTA,"SAP HR Replacement Team,MTA Team",Plenary
 17:00 - 18:00,2C,Management Review & Problem Solving,VS PLM Plenary,PLM,"ePI MSFT Team,MSFT Team,PMS BEV Team,PMS Data Quality Team,Marvels,Transformers,Avengers,DAP BI Team,UPD Team,IRIS Core Team,IRIS System Team",Plenary
-17:00 - 18:00,0A,Management Review & Problem Solving,VS R&D Plenary,R&D,"DNA_KM,CTIS Dev Team,Data Wizards",Plenary
+17:00 - 18:00,0A,Management Review & Problem Solving,VS R&D Plenary,R&D,"DAP Knowledge Mining Team,CTIS Dev Team,Data Wizards",Plenary
 17:00 - 18:00,1A,Management Review & Problem Solving,VS MON Plenary,MON,"Evengers,Product Defenders,Data Dynamos,Flu Fighters,Alpha,EudraGMDP Team",Plenary
 17:00 - 18:00,3A,Management Review & Problem Solving,VS TLM Plenary,TLM,InfoSec Team,Plenary
-17:00 - 18:00,5B,Management Review & Problem Solving,VS EXP RunWay Plenary, EXP Runway,"DNA_ACE,TDT-DCX",Plenary
+17:00 - 18:00,5B,Management Review & Problem Solving,VS EXP RW Plenary, EXP RW,"DAP ACE Team,TDT-DCX",Plenary
 17:00 - 18:00,13B,Management Review & Problem Solving,VS MTA Plenary,MTA,"SAP HR Replacement Team,MTA Team",Plenary
-
-
-
-
