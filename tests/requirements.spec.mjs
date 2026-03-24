@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { createEventId, normalizeRecord } from "../js/loader.js";
 import { buildHierarchy, filterEvents, isGlobalPlenary } from "../js/filter.js";
-import { createRoomCard } from "../js/renderer.js";
+import { createRoomCard, getEventColor, renderLegend } from "../js/renderer.js";
 
 const baseUrl = process.env.SAGE_TEST_BASE_URL ?? "http://127.0.0.1:8000/";
 const nativeFetch = globalThis.fetch;
@@ -28,6 +28,12 @@ async function runTest(name, testFn) {
   }
 }
 
+async function fetchJson(relativePath) {
+  const response = await nativeFetch(new URL(relativePath, baseUrl));
+  assert.equal(response.ok, true, `Expected ${relativePath} to return HTTP 200`);
+  return response.json();
+}
+
 function installMinimalDom() {
   const previousDocument = globalThis.document;
 
@@ -47,6 +53,9 @@ function installMinimalDom() {
     },
     appendChild(node) {
       this.children.push(node);
+    },
+    replaceChildren(...nodes) {
+      this.children = [...nodes];
     },
   });
 
@@ -233,11 +242,123 @@ async function testEventIdAndRendererUseMeetingName() {
   }
 }
 
+async function testLegendAndColorUseValueStreamOnly() {
+  const restoreDom = installMinimalDom();
+
+  try {
+    const colorMap = {
+      ALL: { bg: "#ccc", border: "#111" },
+      PLM: { bg: "#def", border: "#123" },
+      _default: { bg: "#fff", border: "#999" },
+    };
+
+    assert.deepEqual(
+      getEventColor({ vs: "ALL", type: "Plenary" }, colorMap),
+      colorMap.ALL,
+    );
+    assert.deepEqual(
+      getEventColor({ vs: "" }, colorMap),
+      colorMap._default,
+    );
+    assert.deepEqual(
+      getEventColor({ vs: "UNKNOWN" }, colorMap),
+      colorMap._default,
+    );
+
+    const container = {
+      children: [],
+      replaceChildren(...nodes) {
+        this.children = [...nodes];
+      },
+      appendChild(node) {
+        this.children.push(node);
+      },
+    };
+
+    renderLegend(container, colorMap, [
+      { name: "Overall PI Plenary", vs: "ALL", type: "Plenary" },
+      { name: "Coffee break", vs: "ALL", type: "Coffee" },
+      { name: "PLM Planning", vs: "PLM", type: "Breakout" },
+      { name: "Misconfigured", vs: "", type: "Breakout" },
+    ]);
+
+    const legendLabels = container.children.map((item) => item.children[1]?.textContent);
+    assert.deepEqual(legendLabels, ["ALL", "PLM"]);
+    assert.equal(legendLabels.filter((label) => label === "ALL").length, 1);
+    assert.equal(legendLabels.includes(""), false);
+  } finally {
+    restoreDom();
+  }
+}
+
+async function testRendererIgnoresTypeWhilePlenaryFilterStillUsesType() {
+  const colorMap = {
+    ALL: { bg: "#ccc", border: "#111" },
+    PLM: { bg: "#def", border: "#123" },
+    _default: { bg: "#fff", border: "#999" },
+  };
+
+  const events = [
+    {
+      date: "2026-03-17",
+      start: "08:55",
+      end: "09:45",
+      name: "Overall PI Plenary",
+      teams: [],
+      vs: "ALL",
+      topics: "PI Objectives",
+      location: "Auditorium",
+      type: "Plenary",
+    },
+    {
+      date: "2026-03-17",
+      start: "09:45",
+      end: "10:00",
+      name: "Coffee break",
+      teams: [],
+      vs: "ALL",
+      topics: "Small talk",
+      location: "Lobby",
+      type: "Coffee",
+    },
+  ];
+
+  assert.deepEqual(getEventColor(events[0], colorMap), colorMap.ALL);
+  assert.deepEqual(getEventColor(events[1], colorMap), colorMap.ALL);
+
+  const plenaryOnly = filterEvents(events, {
+    date: "2026-03-17",
+    mode: "plenary",
+    value: "",
+    search: "",
+  });
+
+  assert.deepEqual(plenaryOnly.map((event) => event.name), ["Overall PI Plenary"]);
+}
+
+async function testShippedColorConfigKeepsDefaultFallbackAndDropsPlenaryAlias() {
+  const colorMap = await fetchJson("config/colors.json");
+
+  assert.deepEqual(colorMap.ALL, {
+    bg: "#ECEFF1",
+    border: "#455A64",
+  });
+  assert.deepEqual(colorMap._default, {
+    bg: "#FFFFFF",
+    border: "#9E9E9E",
+  });
+  assert.equal("_plenary" in colorMap, false);
+  assert.notDeepEqual(colorMap.ALL, colorMap._default);
+}
+
 const tests = [
   ["shell_shows_sage_and_hides_upload_control", testShellBrandingAndNoUpload],
   ["normalizeRecord_supports_new_csv_and_legacy_json_contracts", testNormalizeRecordSupportsCsvAndLegacyJson],
   ["hierarchy_and_team_filter_follow_name_and_teams_rules", testHierarchyAndTeamFilteringFollowNewContract],
   ["event_id_and_renderer_use_meeting_name", testEventIdAndRendererUseMeetingName],
+  ["legend_and_colors_follow_value_stream_contract", testLegendAndColorUseValueStreamOnly],
+  ["renderer_colors_ignore_type_but_plenary_filter_does_not", testRendererIgnoresTypeWhilePlenaryFilterStillUsesType],
+  ["shipped_color_config_keeps_default_fallback_and_no_plenary_alias", testShippedColorConfigKeepsDefaultFallbackAndDropsPlenaryAlias],
 ];
 
 const results = [];

@@ -27,10 +27,6 @@
     "bg": "#ECEFF1",
     "border": "#455A64"
   },
-  "_plenary": {
-    "bg": "#ECEFF1",
-    "border": "#455A64"
-  },
   "_default": {
     "bg": "#FFFFFF",
     "border": "#9E9E9E"

@@ -144,7 +144,6 @@ await runTest("renderer shows meeting name and hides filter-only teams", async (
     }, {
       PLM: { bg: "#fff", border: "#000" },
       _default: { bg: "#fff", border: "#000" },
-      _plenary: { bg: "#fff", border: "#000" },
     });
 
     assert.equal(card.children[1].textContent, "VS PLM Plenary");

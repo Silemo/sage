@@ -1,14 +1,8 @@
-import { isGlobalPlenary } from "./filter.js";
-
 export function clearContainer(container) {
   container.replaceChildren();
 }
 
 export function getEventColor(event, colorMap) {
-  if (isGlobalPlenary(event)) {
-    return colorMap.ALL ?? colorMap._default;
-  }
-
   return colorMap[event.vs] ?? colorMap._default;
 }
 
@@ -81,7 +75,7 @@ export function renderCards(container, events, colorMap) {
 export function renderLegend(container, colorMap, events) {
   clearContainer(container);
   const activeStreams = [...new Set(events
-    .map((event) => (isGlobalPlenary(event) ? "_plenary" : event.vs))
+    .map((event) => event.vs)
     .filter(Boolean))];
 
   if (activeStreams.length === 0) {
@@ -100,7 +94,7 @@ export function renderLegend(container, colorMap, events) {
 
     const label = document.createElement("span");
     label.className = "legend-label";
-    label.textContent = valueStream === "_plenary" ? "ALL" : valueStream;
+    label.textContent = valueStream;
 
     item.append(swatch, label);
     container.appendChild(item);
