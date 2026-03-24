@@ -6,7 +6,7 @@ export function clearContainer(container) {
 
 export function getEventColor(event, colorMap) {
   if (isGlobalPlenary(event)) {
-    return colorMap._plenary ?? colorMap._default;
+    return colorMap.ALL ?? colorMap._default;
   }
 
   return colorMap[event.vs] ?? colorMap._default;
