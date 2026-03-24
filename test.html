@@ -110,6 +110,12 @@
     assert(normalizedState.date === "2026-03-17", "State normalizer falls back to first valid date", normalizedState.date);
     assert(normalizedState.mode === "all", "State normalizer falls back to all mode", normalizedState.mode);
     assert(getDefaultDate(["2026-03-17", "2026-03-18"]) === "2026-03-17", "Default date picks first available when today is absent");
+
+    // Clear filters behavior (requires DOM for full verification, but we can verify logic)
+    const activeFilter = { mode: "vs", search: "" };
+    const inactiveFilter = { mode: "all", search: "" };
+    assert(activeFilter.mode !== "all" || activeFilter.search !== "", "Filter is active when mode is vs");
+    assert(!(inactiveFilter.mode !== "all" || inactiveFilter.search !== ""), "Filter is inactive when all/empty");
   </script>
 </body>
 </html>

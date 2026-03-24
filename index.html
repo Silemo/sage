@@ -30,7 +30,12 @@
       </div>
 
       <p id="statusMessage" class="status-message" hidden></p>
-      <div id="legend" class="legend" aria-label="Value stream legend"></div>
+      <div class="legend-row">
+        <div id="legend" class="legend" aria-label="Value stream legend"></div>
+        <button id="clearFiltersButton" type="button" class="clear-filters-button" hidden>
+          ✕ Clear filters
+        </button>
+      </div>
     </section>
 
     <section id="rooms-container" class="rooms" aria-live="polite"></section>

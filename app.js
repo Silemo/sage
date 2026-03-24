@@ -29,6 +29,7 @@ function getElements() {
     scopeSelect: document.getElementById("scopeSelect"),
     statusMessage: document.getElementById("statusMessage"),
     legend: document.getElementById("legend"),
+    clearFiltersButton: document.getElementById("clearFiltersButton"),
     rooms: document.getElementById("rooms-container"),
   };
 }
@@ -145,11 +146,37 @@ function getSelectedEvents() {
   return filterEvents(appState.allEvents, appState.filterState);
 }
 
+function isFilterActive(filterState) {
+  return filterState.mode !== "all" || filterState.search !== "";
+}
+
+function updateClearButton() {
+  const { clearFiltersButton } = getElements();
+  if (clearFiltersButton) {
+    clearFiltersButton.hidden = !isFilterActive(appState.filterState);
+  }
+}
+
+function clearFilters() {
+  const { searchInput, scopeSelect } = getElements();
+  appState.filterState.mode = "all";
+  appState.filterState.value = "";
+  appState.filterState.search = "";
+  if (searchInput) {
+    searchInput.value = "";
+  }
+  if (scopeSelect) {
+    scopeSelect.value = "all";
+  }
+  applyCurrentFilters();
+}
+
 function updateView() {
   const elements = getElements();
   const selectedEvents = getSelectedEvents();
   renderCards(elements.rooms, selectedEvents, appState.colors);
   renderLegend(elements.legend, appState.colors, selectedEvents);
+  updateClearButton();
   insertIndicator(elements.rooms, selectedEvents, appState.filterState.date);
   writeState(appState.filterState);
   updateTitle();
@@ -183,7 +210,11 @@ async function initializeApp() {
   buildControls(appState.hierarchy, appState.filterState);
   applyCurrentFilters();
 
-  const { dateTabs, searchInput, scopeSelect, legend, rooms } = getElements();
+  const { dateTabs, searchInput, scopeSelect, legend, clearFiltersButton, rooms } = getElements();
+
+  if (clearFiltersButton) {
+    clearFiltersButton.addEventListener("click", clearFilters);
+  }
 
   dateTabs.addEventListener("click", (clickEvent) => {
     const button = clickEvent.target.closest("button[data-date]");
