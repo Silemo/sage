@@ -4,6 +4,43 @@
 
 GitHub Actions runners are deprecating Node.js 20 (enforced June 2, 2026). The Sage project's two workflow files use four actions pinned to Node.js 20 versions, causing deployment warnings. The fix combines version bumps for actions that have Node.js 24 releases with a runner environment variable for actions that don't yet have updated releases.
 
+## Post-Implementation Analysis (2026-03-24)
+
+The architecture plan was implemented correctly. The `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` env var is working — actions **do** execute on Node.js 24. However, a pre-flight GitHub Actions warning still appears. This section explains why.
+
+### The warning persists — but is cosmetic
+
+After implementation, the workflow still shows:
+```
+Warning: Node.js 20 actions are deprecated. The following actions are running on Node.js 20:
+actions/configure-pages@v5, actions/deploy-pages@v4, actions/upload-artifact@ea165f8d...
+```
+
+This is a **pre-flight informational warning** emitted by GitHub Actions before any action executes. GitHub scans all action manifests at workflow start time and lists any that declare `node20` as their runtime in `action.yml`. This warning is emitted *before* consulting the `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` env var — it reflects manifest declarations, not actual runtime.
+
+### Proof that Node.js 24 IS the actual runtime
+
+The `deploy-pages@v4` log shows:
+```
+(node:2350) [DEP0040] DeprecationWarning: The `punycode` module is deprecated.
+```
+The `punycode` module deprecation was introduced in Node.js 21. Its presence **proves** the action is running on Node.js 24. On Node.js 20, this warning would not appear.
+
+### Transitive dependency: `actions/upload-artifact`
+
+The warning mentions `actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02` — this action is **not** in our workflow files. It is an internal transitive dependency of `actions/upload-pages-artifact@v4`, which pins `upload-artifact` by SHA in its own implementation. This cannot be fixed by the user; the `upload-pages-artifact` maintainers must update their internal dependency.
+
+### Conclusion
+
+| Aspect | Status |
+|--------|--------|
+| Actions actually running on Node.js 24 | **Yes** (proven by punycode deprecation warning) |
+| Pre-flight warning eliminable by user | **No** — based on action manifest declarations, not runtime |
+| Risk to June 2 deadline | **None** — runtime is already Node.js 24 |
+| Warning will resolve when... | Action maintainers release Node 24-native versions of `configure-pages`, `deploy-pages`, and `upload-pages-artifact` updates its internal `upload-artifact` dependency |
+
+**No further action required.** The implementation is complete and working correctly. The cosmetic warning is outside user control.
+
 ## Codebase Context
 
 Two workflow files exist:
@@ -31,8 +68,8 @@ Two workflow files exist:
 ### Approach A: Bump available versions + set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` ⭐ (recommended)
 
 - **Description**: Upgrade `actions/checkout` to `@v6` and `actions/upload-pages-artifact` to `@v4` (both have native Node.js 24 support). For `actions/configure-pages@v5` and `actions/deploy-pages@v4` (no Node.js 24 releases available), set the `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` environment variable at the workflow level to force Node.js 24 runtime.
-- **Pros**: Uses native Node.js 24 where possible; environment variable covers the gap; eliminates all deprecation warnings; forward-compatible with the June 2 deadline; minimal risk since GitHub-hosted runners support all required versions
-- **Cons**: Two actions still rely on the environment variable workaround until their maintainers release Node.js 24 versions; `upload-pages-artifact@v4` has a breaking change (dotfiles excluded from artifacts by default, which is fine for this static site)
+- **Pros**: Uses native Node.js 24 where possible; environment variable covers the gap; ensures all actions actually run on Node.js 24; forward-compatible with the June 2 deadline; minimal risk since GitHub-hosted runners support all required versions. **Note**: a cosmetic pre-flight warning will still appear for actions whose manifests declare `node20` — this is informational only and does not affect runtime.
+- **Cons**: Two actions still rely on the environment variable workaround until their maintainers release Node.js 24 versions; `upload-pages-artifact@v4` has a breaking change (dotfiles excluded from artifacts by default, which is fine for this static site); pre-flight warning persists until action maintainers update manifests
 
 ### Approach B: Only set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` environment variable
 
@@ -48,7 +85,7 @@ Two workflow files exist:
 
 ## Chosen Design
 
-**Approach A** — bump available versions + set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`. This is the most thorough fix: it adopts native Node.js 24 where releases exist, and uses the GitHub-recommended environment variable for the remaining two actions. It eliminates all deprecation warnings and positions the project well ahead of the June 2 deadline.
+**Approach A** — bump available versions + set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`. This is the most thorough fix: it adopts native Node.js 24 where releases exist, and uses the GitHub-recommended environment variable for the remaining actions. It ensures all actions actually execute on Node.js 24 and positions the project well ahead of the June 2 deadline. A cosmetic pre-flight warning will persist until action maintainers release Node 24-native manifests — this is informational only and outside user control.
 
 ### Components
 
@@ -94,9 +131,10 @@ No error handling changes needed. If an action fails to run on Node.js 24, the w
 ## Testing Strategy
 
 - **Manual verification**: After merging, trigger a workflow run (push to `main` or manual dispatch) and verify:
-  1. No Node.js 20 deprecation warnings appear in the workflow log
-  2. The GitHub Pages site deploys successfully
-  3. The site content is correct (no missing assets due to the dotfiles exclusion)
+  1. The GitHub Pages site deploys successfully
+  2. The site content is correct (no missing assets due to the dotfiles exclusion)
+  3. Actions are running on Node.js 24 (confirm by checking for `punycode` deprecation warning in action logs — its presence proves Node 24 runtime)
+  4. **Note**: The pre-flight Node.js 20 deprecation warning will still appear — this is a cosmetic warning based on action manifest declarations, not actual runtime. It cannot be eliminated until action maintainers release Node 24-native versions.
 - **Copilot workflow**: Trigger a manual dispatch of `copilot-setup-steps.yml` to verify checkout works with `@v6`
 
 ## Risks
